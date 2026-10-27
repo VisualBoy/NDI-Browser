@@ -52,7 +52,8 @@ public sealed class LaunchParameters
         double? cadenceAdaptationGain,
         string? bufferOverflowPolicy,
         string? latencyExpansionStrategy,
-        int? pacedWarmupFrames)
+        int? pacedWarmupFrames,
+        bool enablePreview)
     {
         NdiName = ndiName;
         Port = port;
@@ -93,7 +94,13 @@ public sealed class LaunchParameters
         BufferOverflowPolicy = bufferOverflowPolicy;
         LatencyExpansionStrategy = latencyExpansionStrategy;
         PacedWarmupFrames = pacedWarmupFrames;
+        EnablePreview = enablePreview;
     }
+
+    /// <summary>
+    /// Gets a value indicating whether the interactive preview window should be displayed.
+    /// </summary>
+    public bool EnablePreview { get; }
 
     /// <summary>
     /// Gets the NDI source name.
@@ -475,6 +482,7 @@ public sealed class LaunchParameters
         var presetHighPerformance = HasFlag("--preset-high-performance");
         var ndiSendAsync = HasFlag("--ndi-send-async");
         var disableAudio = HasFlag("--disable-audio");
+        var enablePreview = HasFlag("--preview") || ResolveToggle("--enable-preview", "--disable-preview", false);
 
         var cefExtraArgs = GetArgValue("--cef-extra-args");
 
@@ -616,7 +624,8 @@ public sealed class LaunchParameters
             cadenceAdaptationGain,
             bufferOverflowPolicy,
             latencyExpansionStrategy,
-            pacedWarmupFrames);
+            pacedWarmupFrames,
+            enablePreview);
 
         return true;
     }
@@ -727,6 +736,7 @@ public sealed class LaunchParameters
             cadenceAdaptationGain: null,
             bufferOverflowPolicy: null,
             latencyExpansionStrategy: null,
-            pacedWarmupFrames: null);
+            pacedWarmupFrames: null,
+            enablePreview: settings.EnablePreview);
     }
 }

@@ -61,13 +61,13 @@ public class LauncherSettings
     /// Gets or sets a value indicating whether to disable Chromium's GPU vsync throttling.
     /// </summary>
     public bool DisableGpuVsync { get; set; }
-        = false;
+        = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether to disable Chromium's frame rate limiter.
     /// </summary>
     public bool DisableFrameRateLimit { get; set; }
-        = false;
+        = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether the paced buffer should keep playing any queued frames during recovery.
@@ -124,31 +124,31 @@ public class LauncherSettings
     /// Gets or sets a value indicating whether Chromium should force GPU rasterization.
     /// </summary>
     public bool EnableGpuRasterization { get; set; }
-        = false;
+        = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether Chromium should enable zero-copy raster uploads.
     /// </summary>
     public bool EnableZeroCopy { get; set; }
-        = false;
+        = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether Chromium should use the out-of-process rasterizer.
     /// </summary>
     public bool EnableOutOfProcessRasterization { get; set; }
-        = false;
+        = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether Chromium should keep timers and renderers active while hidden.
     /// </summary>
     public bool DisableBackgroundThrottling { get; set; }
-        = false;
+        = true;
 
     /// <summary>
     /// Gets or sets a value indicating whether the high-performance preset should be enabled.
     /// </summary>
     public bool PresetHighPerformance { get; set; }
-        = false;
+        = true;
 
     /// <summary>
     /// Gets or sets the pacing mode for the video pipeline.
@@ -159,4 +159,9 @@ public class LauncherSettings
     /// Gets or sets a value indicating whether the NDI sender should use the asynchronous send method.
     /// </summary>
     public bool NdiSendAsync { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the interactive preview window is enabled.
+    /// </summary>
+    public bool EnablePreview { get; set; } = true;
 }

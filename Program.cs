@@ -36,6 +36,8 @@ public class Program
     /// </summary>
     public static nint NdiSenderPtr;
     internal static CefWrapper browserWrapper = null!;
+    private static Thread? previewUiThread;
+    private static BrowserPreviewForm? previewFormInstance;
 
     private static readonly object NdiLibraryLock = new();
     private static bool NdiLibraryConfigured;
@@ -156,6 +158,37 @@ public class Program
             TimeEndPeriod((uint)periodMs);
             appliedTimerResolution = null;
         }
+    }
+
+    private static void StartInteractivePreview(CefWrapper wrapper, int width, int height)
+    {
+        Log.Information("Launching interactive desktop preview window");
+        previewUiThread = new Thread(() =>
+        {
+            try
+            {
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                previewFormInstance = new BrowserPreviewForm(wrapper, width, height, Log.Logger);
+                wrapper.AttachPreviewForm(previewFormInstance);
+                Application.Run(previewFormInstance);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Interactive preview window encountered an error");
+            }
+            finally
+            {
+                wrapper.DetachPreviewForm();
+                previewFormInstance = null;
+            }
+        })
+        {
+            IsBackground = true,
+            Name = "InteractivePreviewUI"
+        };
+        previewUiThread.SetApartmentState(ApartmentState.STA);
+        previewUiThread.Start();
     }
 
     private static void WarnAboutUnwiredFlags(LaunchParameters parameters)
@@ -385,36 +418,22 @@ public class Program
                     var targetWindowlessRate = windowlessFrameRateOverride ?? Math.Clamp((int)Math.Round(frameRate.Value), 1, 240);
                     settings.CefCommandLineArgs.Add("off-screen-frame-rate", targetWindowlessRate.ToString(CultureInfo.InvariantCulture));
 
-                    if (parameters.DisableGpuVsync || useHighPerformancePreset)
-                    {
-                        settings.CefCommandLineArgs.Add("disable-gpu-vsync", "1");
-                    }
+                    // GPU acceleration & WebGL optimizations (active by default)
+                    settings.CefCommandLineArgs["ignore-gpu-blocklist"] = "1";
+                    settings.CefCommandLineArgs["enable-gpu-rasterization"] = "1";
+                    settings.CefCommandLineArgs["enable-zero-copy"] = "1";
+                    settings.CefCommandLineArgs["enable-oop-rasterization"] = "1";
+                    settings.CefCommandLineArgs["disable-gpu-vsync"] = "1";
+                    settings.CefCommandLineArgs["disable-frame-rate-limit"] = "1";
+                    settings.CefCommandLineArgs["disable-background-timer-throttling"] = "1";
+                    settings.CefCommandLineArgs["disable-renderer-backgrounding"] = "1";
+                    settings.CefCommandLineArgs["enable-webgl"] = "1";
+                    settings.CefCommandLineArgs["enable-accelerated-2d-canvas"] = "1";
+                    settings.CefCommandLineArgs["enable-accelerated-video-decode"] = "1";
 
-                    if (parameters.DisableFrameRateLimit || useHighPerformancePreset)
-                    {
-                        settings.CefCommandLineArgs.Add("disable-frame-rate-limit", "1");
-                    }
-
-                    if (parameters.EnableGpuRasterization || useHighPerformancePreset)
-                    {
-                        settings.CefCommandLineArgs.Add("enable-gpu-rasterization", "1");
-                    }
-
-                    if (parameters.EnableZeroCopy || useHighPerformancePreset)
-                    {
-                        settings.CefCommandLineArgs.Add("enable-zero-copy", "1");
-                    }
-
-                    if (parameters.EnableOutOfProcessRasterization || useHighPerformancePreset)
-                    {
-                        settings.CefCommandLineArgs.Add("enable-oop-rasterization", "1");
-                    }
-
-                    if (parameters.DisableBackgroundThrottling || useHighPerformancePreset)
-                    {
-                        settings.CefCommandLineArgs.Add("disable-background-timer-throttling", "1");
-                        settings.CefCommandLineArgs.Add("disable-renderer-backgrounding", "1");
-                    }
+                    // Auto-grant media stream (webcam, mic)
+                    settings.CefCommandLineArgs["enable-media-stream"] = "1";
+                    settings.CefCommandLineArgs["use-fake-ui-for-media-stream"] = "1";
 
                     if (!parameters.DisableAudio)
                     {
@@ -461,6 +480,11 @@ public class Program
 
                     await browserWrapper.InitializeWrapperAsync();
                     Log.Information("Chromium initialised successfully");
+
+                    if (parameters.EnablePreview)
+                    {
+                        StartInteractivePreview(browserWrapper, width, height);
+                    }
                 });
             }
             catch (Exception ex)
@@ -469,164 +493,164 @@ public class Program
                 return;
             }
 
-        Log.Information("Building ASP.NET Core host on port {Port}", parameters.Port);
-        var builder = WebApplication.CreateBuilder(args);
+            Log.Information("Building ASP.NET Core host on port {Port}", parameters.Port);
+            var builder = WebApplication.CreateBuilder(args);
 
-        builder.Services.AddSerilog();
+            builder.Services.AddSerilog();
 
-        builder.WebHost.UseUrls($"http://*:{parameters.Port}");
+            builder.WebHost.UseUrls($"http://*:{parameters.Port}");
 
-        // Add services to the container.
-        builder.Services.AddAuthorization();
+            // Add services to the container.
+            builder.Services.AddAuthorization();
 
-        // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-        builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen();
+            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
 
-        var app = builder.Build();
-        app.UseSwagger();
-        app.UseSwaggerUI();
+            var app = builder.Build();
+            app.UseSwagger();
+            app.UseSwaggerUI();
 
-        var capabilitiesXml = $$"""<ndi_capabilities ntk_kvm="true" />""";
-        capabilitiesXml += "\0";
-        var capabilitiesPtr = UTF.StringToUtf8(capabilitiesXml);
+            var capabilitiesXml = $$"""<ndi_capabilities ntk_kvm="true" />""";
+            capabilitiesXml += "\0";
+            var capabilitiesPtr = UTF.StringToUtf8(capabilitiesXml);
 
-        var metaframe = new NDIlib.metadata_frame_t()
-        {
-            p_data = capabilitiesPtr
-        };
-
-        NDIlib.send_add_connection_metadata(NdiSenderPtr, ref metaframe);
-        Marshal.FreeHGlobal(capabilitiesPtr);
-
-        metadataCancellation = new CancellationTokenSource();
-        var metadataToken = metadataCancellation.Token;
-        metadataThread = new Thread(() =>
-        {
-            var metadata = new NDIlib.metadata_frame_t();
-            var x = 0.0f;
-            var y = 0.0f;
-            Log.Information("NDI metadata capture thread started");
-            try
+            var metaframe = new NDIlib.metadata_frame_t()
             {
-                while (!metadataToken.IsCancellationRequested)
+                p_data = capabilitiesPtr
+            };
+
+            NDIlib.send_add_connection_metadata(NdiSenderPtr, ref metaframe);
+            Marshal.FreeHGlobal(capabilitiesPtr);
+
+            metadataCancellation = new CancellationTokenSource();
+            var metadataToken = metadataCancellation.Token;
+            metadataThread = new Thread(() =>
+            {
+                var metadata = new NDIlib.metadata_frame_t();
+                var x = 0.0f;
+                var y = 0.0f;
+                Log.Information("NDI metadata capture thread started");
+                try
                 {
-                    var senderHandle = Program.NdiSenderPtr;
-                    if (senderHandle == nint.Zero)
+                    while (!metadataToken.IsCancellationRequested)
                     {
-                        if (metadataToken.WaitHandle.WaitOne(100))
+                        var senderHandle = Program.NdiSenderPtr;
+                        if (senderHandle == nint.Zero)
+                        {
+                            if (metadataToken.WaitHandle.WaitOne(100))
+                            {
+                                break;
+                            }
+
+                            continue;
+                        }
+
+                        var result = NDIlib.send_capture(senderHandle, ref metadata, 1000);
+
+                        if (metadataToken.IsCancellationRequested)
                         {
                             break;
                         }
 
-                        continue;
-                    }
-
-                    var result = NDIlib.send_capture(senderHandle, ref metadata, 1000);
-
-                    if (metadataToken.IsCancellationRequested)
-                    {
-                        break;
-                    }
-
-                    if (result == NDIlib.frame_type_e.frame_type_none)
-                    {
-                        continue;
-                    }
-                    else if (result == NDIlib.frame_type_e.frame_type_metadata)
-                    {
-                        var metadataConverted = UTF.Utf8ToString(metadata.p_data);
-
-                        if (metadataConverted.StartsWith("<ndi_kvm u=\"", StringComparison.Ordinal))
+                        if (result == NDIlib.frame_type_e.frame_type_none)
                         {
-                            metadataConverted = metadataConverted.Replace("<ndi_kvm u=\"", string.Empty, StringComparison.Ordinal);
-                            metadataConverted = metadataConverted.Replace("\"/>", string.Empty, StringComparison.Ordinal);
-
-                            try
-                            {
-                                var binary = Convert.FromBase64String(metadataConverted);
-
-                                var opcode = binary[0];
-
-                                if (opcode == 0x03)
-                                {
-                                    x = BitConverter.ToSingle(binary, 1);
-                                    y = BitConverter.ToSingle(binary, 5);
-                                }
-                                else if (opcode == 0x04)
-                                {
-                                    // Mouse Left Down
-                                    var screenX = (int)(x * width);
-                                    var screenY = (int)(y * height);
-
-                                    browserWrapper?.Click(screenX, screenY);
-                                }
-                                else if (opcode == 0x07)
-                                {
-                                    // Mouse Left Up
-                                }
-                            }
-                            catch
-                            {
-                            }
+                            continue;
                         }
+                        else if (result == NDIlib.frame_type_e.frame_type_metadata)
+                        {
+                            var metadataConverted = UTF.Utf8ToString(metadata.p_data);
 
-                        Log.Logger.Warning("Got metadata: " + metadataConverted);
-                        NDIlib.send_free_metadata(senderHandle, ref metadata);
+                            if (metadataConverted.StartsWith("<ndi_kvm u=\"", StringComparison.Ordinal))
+                            {
+                                metadataConverted = metadataConverted.Replace("<ndi_kvm u=\"", string.Empty, StringComparison.Ordinal);
+                                metadataConverted = metadataConverted.Replace("\"/>", string.Empty, StringComparison.Ordinal);
+
+                                try
+                                {
+                                    var binary = Convert.FromBase64String(metadataConverted);
+
+                                    var opcode = binary[0];
+
+                                    if (opcode == 0x03)
+                                    {
+                                        x = BitConverter.ToSingle(binary, 1);
+                                        y = BitConverter.ToSingle(binary, 5);
+                                    }
+                                    else if (opcode == 0x04)
+                                    {
+                                        // Mouse Left Down
+                                        var screenX = (int)(x * width);
+                                        var screenY = (int)(y * height);
+
+                                        browserWrapper?.Click(screenX, screenY);
+                                    }
+                                    else if (opcode == 0x07)
+                                    {
+                                        // Mouse Left Up
+                                    }
+                                }
+                                catch
+                                {
+                                }
+                            }
+
+                            Log.Logger.Warning("Got metadata: " + metadataConverted);
+                            NDIlib.send_free_metadata(senderHandle, ref metadata);
+                        }
                     }
                 }
-            }
-            catch (Exception ex) when (!metadataToken.IsCancellationRequested)
+                catch (Exception ex) when (!metadataToken.IsCancellationRequested)
+                {
+                    Log.Warning(ex, "NDI metadata capture thread terminated with an exception");
+                }
+                finally
+                {
+                    Log.Information("NDI metadata capture thread exiting");
+                }
+            })
             {
-                Log.Warning(ex, "NDI metadata capture thread terminated with an exception");
-            }
-            finally
+                IsBackground = true,
+                Name = "NDI metadata capture"
+            };
+            metadataThread.Start();
+            metadataThreadStarted = true;
+
+
+            app.MapPost("/seturl", (HttpContext httpContext, GoToUrlModel url) =>
             {
-                Log.Information("NDI metadata capture thread exiting");
-            }
-        })
-        {
-            IsBackground = true,
-            Name = "NDI metadata capture"
-        };
-        metadataThread.Start();
-        metadataThreadStarted = true;
+                browserWrapper.SetUrl(url.Url);
+                return true;
+            })
+            .WithOpenApi();
 
-
-        app.MapPost("/seturl", (HttpContext httpContext, GoToUrlModel url) =>
-        {
-            browserWrapper.SetUrl(url.Url);
-            return true;
-        })
-        .WithOpenApi();
-
-        app.MapGet("/scroll/{increment}", (int increment) =>
-        {
-            browserWrapper.ScrollBy(increment);
-        }).WithOpenApi();
-
-        app.MapGet("/click/{x}/{y}", (int x, int y) =>
-        {
-            browserWrapper.Click(x, y);
-        }).WithOpenApi();
-
-        app.MapPost("/keystroke", (SendKeystrokeModel model) =>
-        {
-            browserWrapper.SendKeystrokes(model);
-        }).WithOpenApi();
-
-        app.MapGet("/type/{toType}", (string toType) =>
-        {
-            browserWrapper.SendKeystrokes(new SendKeystrokeModel
+            app.MapGet("/scroll/{increment}", (int increment) =>
             {
-                ToSend = toType
-            });
-        }).WithOpenApi();
+                browserWrapper.ScrollBy(increment);
+            }).WithOpenApi();
 
-        app.MapGet("/refresh", () =>
-        {
-            browserWrapper.RefreshPage();
-        }).WithOpenApi();
+            app.MapGet("/click/{x}/{y}", (int x, int y) =>
+            {
+                browserWrapper.Click(x, y);
+            }).WithOpenApi();
+
+            app.MapPost("/keystroke", (SendKeystrokeModel model) =>
+            {
+                browserWrapper.SendKeystrokes(model);
+            }).WithOpenApi();
+
+            app.MapGet("/type/{toType}", (string toType) =>
+            {
+                browserWrapper.SendKeystrokes(new SendKeystrokeModel
+                {
+                    ToSend = toType
+                });
+            }).WithOpenApi();
+
+            app.MapGet("/refresh", () =>
+            {
+                browserWrapper.RefreshPage();
+            }).WithOpenApi();
 
             Log.Information("Starting ASP.NET Core host");
             try
@@ -641,6 +665,17 @@ public class Program
         }
         finally
         {
+            if (previewFormInstance is { IsDisposed: false } form)
+            {
+                try
+                {
+                    form.BeginInvoke((Action)form.Close);
+                }
+                catch
+                {
+                }
+            }
+
             try
             {
                 Log.Information("Stopping NDI metadata capture thread");

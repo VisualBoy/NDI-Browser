@@ -1,8 +1,8 @@
-# Tractus HTML to NDI Utility
+# NDI Browser Utility
 
 A simple wrapper around [CEFSharp](https://github.com/cefsharp/CefSharp) and [NDI Wrapper for .NET](https://github.com/eliaspuurunen/NdiLibDotNetCoreBase). Sends HTML pages to NDI, including audio if playback on the page is supported.
 
-[Grab the latest ZIP file](https://github.com/tractusevents/Tractus.HtmlToNdi/releases) from the releases page.
+[Grab the latest ZIP file](https://github.com/tractusevents/NDI-Browser/releases) from the releases page.
 
 ## Prerequisites
 
@@ -15,6 +15,10 @@ See [`Docs/building.md`](Docs/building.md) for detailed instructions. The
 project targets **.NET 8.0 (windows)** and requires the Windows Desktop
 reference packs, so make sure the .NET SDK you install includes the "Windows
 desktop" workload before compiling.
+
+### Build command:
+
+`dotnet publish Tractus.HtmlToNdi.csproj -c Release -r win-x64 --self-contained false -o C:\VJ\NDI-Browser`
 
 ## Usage
 
@@ -46,14 +50,22 @@ Parameter|Description
 `--enable-compositor-capture` / `--disable-compositor-capture`|Bypass the legacy invalidation loop and stream frames directly from Chromium's compositor via the native capture helper. Defaults to disabled.
 `--telemetry-interval=10`|Seconds between video pipeline telemetry log entries. Defaults to 10 seconds.
 `--windowless-frame-rate=60`|Overrides CEF's internal repaint cadence. Defaults to the nearest integer of `--fps`.
-`--disable-gpu-vsync`|Disables Chromium's GPU vsync throttling.
-`--disable-frame-rate-limit`|Disables Chromium's frame rate limiter.
-`--enable-gpu-rasterization`|Forces Chromium to rasterize content on the GPU even for off-screen contexts.
-`--enable-zero-copy`|Enables zero-copy raster uploads from GPU memory to reduce texture copies.
-`--enable-oop-rasterization`|Moves rasterization work to the out-of-process raster thread for smoother rendering.
-`--disable-background-throttling`|Prevents Chromium from throttling timers or renderers when the view is hidden/off-screen.
+`--disable-gpu-vsync`|Disables Chromium's GPU vsync throttling. Enabled by default.
+`--disable-frame-rate-limit`|Disables Chromium's frame rate limiter. Enabled by default.
+`--enable-gpu-rasterization`|Forces Chromium to rasterize content on the GPU even for off-screen contexts. Enabled by default.
+`--enable-zero-copy`|Enables zero-copy raster uploads from GPU memory to reduce texture copies. Enabled by default.
+`--enable-oop-rasterization`|Moves rasterization work to the out-of-process raster thread for smoother rendering. Enabled by default.
+`--disable-background-throttling`|Prevents Chromium from throttling timers or renderers when the view is hidden/off-screen. Enabled by default.
+`--preview` / `--enable-preview`|Displays an interactive desktop preview window that renders the live OSR stream and translates/forwards mouse and keyboard input directly into Chromium while streaming to NDI. Enabled by default in the launcher.
+`--disable-preview`|Suppresses the interactive preview window when launching via CLI.
 `--launcher`|Forces the launcher window to appear even when other parameters are supplied.
 `--no-launcher`|Skips the launcher and honours the supplied command-line arguments only.
+
+> **Hardware acceleration & WebGL:** GPU rasterization, zero-copy uploads, out-of-process rasterization, WebGL, 2D canvas acceleration, hardware video decode, and unthrottled frame rates are now active by default for maximum throughput.
+
+> **Webcam & microphone sharing:** WebRTC media access requests (camera, microphone) are automatically granted using system default devices with no blocking permission prompts.
+
+> **Interactive desktop preview:** The interactive preview window runs on an independent UI thread and mirrors the off-screen render buffer in real time. Full mouse (moves, clicks, wheel) and keyboard events are translated and forwarded into Chromium. Closing the preview window does not interrupt or terminate the live NDI broadcast.
 
 > **Experimental parallel path:** `--enable-compositor-capture` (and the matching launcher checkbox) opt into an alternative capture pipeline that relies on Chromium's compositor rather than UI-thread invalidations. It is intentionally isolated behind this flag; the legacy path remains the default and continues to run unchanged when the flag is left off. Treat this mode as preview-only while we evaluate performance and stability—do not enable it for shows unless you are actively testing it.
 
@@ -91,6 +103,4 @@ Route|Method|Description|Example
 - Audio data received from the browser is passed to NDI directly.
 - NDI frame rate defaults to 60 fps but can be overridden with `--fps`. Chromium's internal repaint cadence can be adjusted with `--windowless-frame-rate`.
 
-## More Tools
 
-We have more tools available at [our website, tractusevents.com](https://www.tractusevents.com/tools).

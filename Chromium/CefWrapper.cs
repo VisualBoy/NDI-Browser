@@ -38,6 +38,7 @@ internal class CefWrapper : IDisposable
     private readonly ILogger logger;
     private readonly bool compositorCaptureRequested;
     private CompositorCaptureBridge? compositorCaptureBridge;
+    private BrowserPreviewForm? previewForm;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CefWrapper"/> class.
@@ -63,6 +64,7 @@ internal class CefWrapper : IDisposable
         this.browser = new ChromiumWebBrowser(initialUrl)
         {
             AudioHandler = new CustomAudioHandler(),
+            PermissionHandler = new CustomPermissionHandler(this.logger),
         };
 
         this.browser.Size = new System.Drawing.Size(this.Width, this.Height);
@@ -168,6 +170,8 @@ internal class CefWrapper : IDisposable
             Stopwatch.GetTimestamp(),
             DateTime.UtcNow);
         this.videoPipeline.HandleFrame(capturedFrame);
+
+        this.previewForm?.UpdateFrame(e.BufferHandle, e.Width, e.Height);
     }
 
     /// <summary>
@@ -231,6 +235,11 @@ internal class CefWrapper : IDisposable
 
         try
         {
+            if (frame.StorageKind == CapturedFrameStorageKind.CpuMemory)
+            {
+                this.previewForm?.UpdateFrame(frame.Buffer, frame.Width, frame.Height);
+            }
+
             this.videoPipeline.HandleCompositorFrame(frame);
         }
         catch (Exception ex)
@@ -295,6 +304,7 @@ internal class CefWrapper : IDisposable
                 }
 
                 this.browser = null;
+                this.previewForm = null;
                 this.framePump?.Dispose();
                 this.videoPipeline.Dispose();
             }
@@ -360,7 +370,7 @@ internal class CefWrapper : IDisposable
     {
         var host = this.browser?.GetBrowser()?.GetHost();
 
-        if(host is null)
+        if (host is null)
         {
             return;
         }
@@ -418,5 +428,71 @@ internal class CefWrapper : IDisposable
         }
 
         this.browser.Reload();
+    }
+
+    /// <summary>
+    /// Attaches an interactive preview form to receive live frames.
+    /// </summary>
+    /// <param name="form">The preview form instance.</param>
+    public void AttachPreviewForm(BrowserPreviewForm form)
+    {
+        this.previewForm = form;
+    }
+
+    /// <summary>
+    /// Detaches the interactive preview form.
+    /// </summary>
+    public void DetachPreviewForm()
+    {
+        this.previewForm = null;
+    }
+
+    /// <summary>
+    /// Forwards a mouse move event to Chromium.
+    /// </summary>
+    /// <param name="x">The x-coordinate.</param>
+    /// <param name="y">The y-coordinate.</param>
+    /// <param name="mouseLeave">Whether the mouse is leaving.</param>
+    public void SendMouseMove(int x, int y, bool mouseLeave)
+    {
+        var host = this.browser?.GetBrowser()?.GetHost();
+        host?.SendMouseMoveEvent(x, y, mouseLeave, CefEventFlags.None);
+    }
+
+    /// <summary>
+    /// Forwards a mouse click event to Chromium.
+    /// </summary>
+    /// <param name="x">The x-coordinate.</param>
+    /// <param name="y">The y-coordinate.</param>
+    /// <param name="button">The mouse button.</param>
+    /// <param name="mouseUp">Whether this is a button up event.</param>
+    /// <param name="clickCount">The click count.</param>
+    public void SendMouseClick(int x, int y, MouseButtonType button, bool mouseUp, int clickCount)
+    {
+        var host = this.browser?.GetBrowser()?.GetHost();
+        host?.SendMouseClickEvent(x, y, button, mouseUp, clickCount, CefEventFlags.None);
+    }
+
+    /// <summary>
+    /// Forwards a mouse wheel event to Chromium.
+    /// </summary>
+    /// <param name="x">The x-coordinate.</param>
+    /// <param name="y">The y-coordinate.</param>
+    /// <param name="deltaX">The horizontal scroll delta.</param>
+    /// <param name="deltaY">The vertical scroll delta.</param>
+    public void SendMouseWheel(int x, int y, int deltaX, int deltaY)
+    {
+        var host = this.browser?.GetBrowser()?.GetHost();
+        host?.SendMouseWheelEvent(x, y, deltaX, deltaY, CefEventFlags.None);
+    }
+
+    /// <summary>
+    /// Forwards a keyboard event to Chromium.
+    /// </summary>
+    /// <param name="keyEvent">The CEF key event.</param>
+    public void SendKeyEvent(KeyEvent keyEvent)
+    {
+        var host = this.browser?.GetBrowser()?.GetHost();
+        host?.SendKeyEvent(keyEvent);
     }
 }

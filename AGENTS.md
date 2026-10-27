@@ -85,6 +85,7 @@ user types a non-empty name. Initial default is "HTML5" before prompting. |
 | `--enable-oop-rasterization` | `--enable-oop-rasterization` | Moves raster work to the out-of-process raster thread. Alias: `--enable-out-of-process-rasterization`. |
 | `--disable-background-throttling` | `--disable-background-throttling` | Prevents Chromium from throttling timers or hidden renderers. Also sets `--disable-renderer-backgrounding`. |
 | `--preset-high-performance` | `--preset-high-performance` | Enables a preset of Chromium flags for maximum rendering throughput. This is equivalent to enabling `--enable-gpu-rasterization`, `--enable-zero-copy`, `--enable-oop-rasterization`, `--disable-gpu-vsync`, `--disable-frame-rate-limit`, and `--disable-background-throttling`. |
+| `--preview` / `--enable-preview` / `--disable-preview` | `--preview` | Controls whether the interactive desktop preview window is displayed. When enabled, renders live OSR frames and translates/forwards mouse and keyboard input directly into Chromium while keeping NDI active. Enabled by default in the launcher. |
 | `--pacing-mode=<Latency|Smoothness>` | `--pacing-mode=Smoothness` | Selects the paced sender strategy. The default `Latency` mode keeps the shallow paced buffer contract, while `Smoothness` tries to prioritise continuous motion with a deep buffer and high windowless render rate; when Smoothness is chosen without an explicit depth it now forces paced buffering with a 300-frame capacity even if buffering was already enabled via flag, and the launcher preserves previously saved Smoothness buffer depths when reopening settings (only reapplying the 300-frame default after the user reselects Smoothness). |
 | `--enable-compositor-capture` / `--disable-compositor-capture` | `--enable-compositor-capture` | Opts into the compositor capture experiment guarded by `CompositorCaptureBridge`. When the helper DLL is missing or the toggle is off the app reverts to the legacy paint path. |
 | `-debug` | `-debug` | Raises Serilog minimum level to `Debug`. |
@@ -110,6 +111,8 @@ Launcher/
   LauncherSettings*.cs               # JSON persistence for launcher defaults
 Chromium/
   AsyncContext.cs                    # Single-threaded async pump for CefSharp startup
+  BrowserPreviewForm.cs              # Interactive WinForms preview window with input forwarding into CEF OSR
+  CustomPermissionHandler.cs         # IPermissionHandler auto-granting webcam, microphone, and permission prompts
   FramePump.cs                       # Periodic/on-demand invalidator with watchdog and cadence adaptation
   CefWrapper.cs                      # Owns ChromiumWebBrowser instance, paint/compositor bridge, HTTP input helpers
   CustomAudioHandler.cs              # IAudioHandler implementation, planar float → pseudo-interleaved buffer → NDI audio

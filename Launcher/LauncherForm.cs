@@ -39,6 +39,7 @@ public sealed class LauncherForm : Form
     private readonly CheckBox _presetHighPerformanceCheckBox;
     private readonly ComboBox _pacingModeComboBox;
     private readonly CheckBox _ndiSendAsyncCheckBox;
+    private readonly CheckBox _enablePreviewCheckBox;
     private bool _suppressPacingCheckboxUpdates;
     private bool _suppressPacingModeUpdates;
 
@@ -317,6 +318,14 @@ public sealed class LauncherForm : Form
         };
         AddRow(table, "Background Throttling", _disableBackgroundThrottlingCheckBox);
 
+        _enablePreviewCheckBox = new CheckBox
+        {
+            Text = "Show interactive preview window",
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+        };
+        AddRow(table, "Preview Window", _enablePreviewCheckBox);
+
         var buttonPanel = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.RightToLeft,
@@ -401,6 +410,7 @@ public sealed class LauncherForm : Form
         _pacingModeComboBox.SelectedItem = settings.PacingMode.ToString();
         _suppressPacingModeUpdates = false;
         _ndiSendAsyncCheckBox.Checked = settings.NdiSendAsync;
+        _enablePreviewCheckBox.Checked = settings.EnablePreview;
 
         UpdateBufferingDependentControls();
         UpdateHighPerformancePresetControls();
@@ -590,7 +600,8 @@ public sealed class LauncherForm : Form
             DisableBackgroundThrottling = _disableBackgroundThrottlingCheckBox.Checked,
             PresetHighPerformance = _presetHighPerformanceCheckBox.Checked,
             PacingMode = Enum.Parse<PacingMode>(pacingModeSelection),
-            NdiSendAsync = _ndiSendAsyncCheckBox.Checked
+            NdiSendAsync = _ndiSendAsyncCheckBox.Checked,
+            EnablePreview = _enablePreviewCheckBox.Checked
         };
 
         try
