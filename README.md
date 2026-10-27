@@ -2,7 +2,7 @@
 
 A simple wrapper around [CEFSharp](https://github.com/cefsharp/CefSharp) and [NDI Wrapper for .NET](https://github.com/eliaspuurunen/NdiLibDotNetCoreBase). Sends HTML pages to NDI, including audio if playback on the page is supported.
 
-[Grab the latest ZIP file](https://github.com/tractusevents/NDI-Browser/releases) from the releases page.
+[Grab the latest ZIP file](https://github.com/VisualBoy/NDI-Browser/releases) from the releases page.
 
 <img width="661" height="1047" alt="image" src="https://github.com/user-attachments/assets/a42b788d-92b3-499b-9edf-c4fdc23d23d3" />
 
