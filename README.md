@@ -4,6 +4,9 @@ A simple wrapper around [CEFSharp](https://github.com/cefsharp/CefSharp) and [ND
 
 [Grab the latest ZIP file](https://github.com/tractusevents/NDI-Browser/releases) from the releases page.
 
+<img width="661" height="1047" alt="image" src="https://github.com/user-attachments/assets/a42b788d-92b3-499b-9edf-c4fdc23d23d3" />
+
+
 ## Prerequisites
 
 - No external NDI Runtime installation is required for typical deployments—the ZIP now ships with `Processing.NDI.Lib.x64.dll` under `runtimes/win-x64/native/` and the app prefers that bundled copy automatically.
