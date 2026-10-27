@@ -6,6 +6,8 @@ A simple wrapper around [CEFSharp](https://github.com/cefsharp/CefSharp) and [ND
 
 <img width="661" height="1047" alt="image" src="https://github.com/user-attachments/assets/a42b788d-92b3-499b-9edf-c4fdc23d23d3" />
 
+<img width="1279" height="750" alt="image" src="https://github.com/user-attachments/assets/4b01c387-6aaf-4ef8-82bf-5308823f2f8c" />
+
 
 ## Prerequisites
 
