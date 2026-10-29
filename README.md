@@ -6,6 +6,9 @@ A simple wrapper around [CEFSharp](https://github.com/cefsharp/CefSharp) and [ND
 
 <img width="1456" height="720" alt="ndi-browser-github-cover" src="https://github.com/user-attachments/assets/f848a81d-acff-4efa-a021-4e633f88db3d" />
 
+### v2026.10.29: Integrated Dark Mode Navigation Bar & Custom Window Frame
+
+<img width="1314" height="848" alt="image" src="https://github.com/user-attachments/assets/ba24c57e-800e-49f8-b9af-acd8946a5f25" />
 
 
 ## Prerequisites
