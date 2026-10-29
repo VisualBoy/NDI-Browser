@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NDI-Browser 16:9 Test Card</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="glcanvas"></canvas>
+
+    <script>
+        // --- Vertex Shader ---
+        const vsSource = `#version 300 es
+            in vec2 position;
+            void main() {
+                gl_Position = vec4(position, 0.0, 1.0);
+            }
+        `;
+
+        const fsSource = `#version 300 es
+            precision highp float;
+            
+            uniform vec2 iResolution;
+            out vec4 fragColor;
+
+            #define GRID_BG_COLOR vec3(0.15, 0.15, 0.15)
+            #define GRID_LINE_COLOR vec3(0.75, 0.75, 0.75)
+
+            float sinpi(float x) { return sin(3.1415926536 * x); }
+            vec2 sinpi(vec2 x) { return sin(3.1415926536 * x); }
+            
+            float sin1mhz(float x) { 
+                x *= 5.76; 
+                return mix(sinpi(x), 0.0, smoothstep(0.8, 1.0, fwidth(x))); 
+            }
+            
+            float aastep(float g, float x) { 
+                float fw = fwidth(g); 
+                return smoothstep(-fw, fw, x); 
+            }
+            float aastep(float x) { return aastep(x, x); }
+            float aasign(float x) { return aastep(x) * 2.0 - 1.0; }
+            float lt(float x, float y) { return aastep(x, y - x); }
+            vec2 ppfract(vec2 x) { return abs(fract(x * 0.5) * 2.0 - 1.0); }
+
+            const float cw = 42.0;
+            const float lw = 1.0 / cw;
+
+            float line(float x) { return aastep(x, lw - abs(x)); }
+
+            void centre(inout vec3 c, float x, int y) {
+                if (y == 1 || y == -1) {
+                    c *= 1.0 - lt(abs(x), 0.5 - lw);
+                    c += line(x);
+                }
+            }
+
+            float printChar(vec2 p, int n) {
+                if (p.x < 0.0 || p.x > 3.0 || p.y < 0.0 || p.y > 5.0) return 0.0;
+                ivec2 ip = ivec2(p);
+                int b = 0;
+                if (n == 78) {
+                    if (ip.y==4) b = (ip.x==0 || ip.x==2)?1:0;
+                    else if (ip.y==3) b = (ip.x==0 || ip.x==1 || ip.x==2)?1:0;
+                    else if (ip.y==2) b = (ip.x==0 || ip.x==2)?1:0;
+                    else if (ip.y==1) b = (ip.x==0 || ip.x==2)?1:0;
+                    else if (ip.y==0) b = (ip.x==0 || ip.x==2)?1:0;
+                } else if (n == 68) {
+                    if (ip.y==4 || ip.y==0) b = (ip.x<2)?1:0;
+                    else if (ip.y==3 || ip.y==1) b = (ip.x==0 || ip.x==2)?1:0;
+                    else if (ip.y==2) b = (ip.x==0 || ip.x==2)?1:0;
+                } else if (n == 73) {
+                    b = (ip.x==1)?1:0;
+                } else if (n == 45) {
+                    if (ip.y==2) b = 1;
+                } else if (n == 66) {
+                    if (ip.y==4 || ip.y==2 || ip.y==0) b = (ip.x<2)?1:0;
+                    else b = (ip.x==0 || ip.x==2)?1:0;
+                } else if (n == 82) {
+                    if (ip.y==4 || ip.y==2) b = (ip.x<2)?1:0;
+                    else if (ip.y==3) b = (ip.x==0 || ip.x==2)?1:0;
+                    else if (ip.y==1 || ip.y==0) b = (ip.x==0 || ip.x==2)?1:0;
+                } else if (n == 79) {
+                    if (ip.y==4 || ip.y==0) b = (ip.x==1)?1:0;
+                    else b = (ip.x==0 || ip.x==2)?1:0;
+                } else if (n == 87) {
+                    if (ip.y==4) b = (ip.x==0 || ip.x==2)?1:0;
+                    else if (ip.y==3 || ip.y==2) b = (ip.x==0 || ip.x==2)?1:0;
+                    else if (ip.y==1) b = (ip.x==0 || ip.x==1 || ip.x==2)?1:0;
+                    else if (ip.y==0) b = (ip.x==0 || ip.x==2)?1:0;
+                } else if (n == 83) {
+                    if (ip.y==4 || ip.y==2 || ip.y==0) b = (ip.x>0)?1:0;
+                    else if (ip.y==3) b = (ip.x==0)?1:0;
+                    else if (ip.y==1) b = (ip.x==2)?1:0;
+                } else if (n == 69) {
+                    if (ip.y==4 || ip.y==2 || ip.y==0) b = 1;
+                    else b = (ip.x==0)?1:0;
+                } else if (n == 120 || n == 88) {
+                    if (ip.y == 4 || ip.y == 0) b = (ip.x == 0 || ip.x == 2) ? 1 : 0;
+                    else if (ip.y == 3 || ip.y == 1) b = (ip.x == 0 || ip.x == 2) ? 1 : 0;
+                    else if (ip.y == 2) b = (ip.x == 1) ? 1 : 0;
+                } else if (n >= 48 && n <= 57) {
+                    int d = n - 48;
+                    if (d==0) b = (ip.y==4||ip.y==0)?1:(ip.x==0||ip.x==2?1:0);
+                    else if (d==1) b = (ip.x==1)?1:0;
+                    else if (d==2) b = (ip.y==4||ip.y==2||ip.y==0)?1:(ip.y==3&&ip.x==2||ip.y==1&&ip.x==0?1:0);
+                    else if (d==3) b = (ip.y==4||ip.y==2||ip.y==0)?1:(ip.x==2?1:0);
+                    else if (d==4) b = (ip.y==2||ip.x==2)?1:(ip.y>2&&ip.x==0?1:0);
+                    else if (d==5) b = (ip.y==4||ip.y==2||ip.y==0)?1:(ip.y>2&&ip.x==0||ip.y<2&&ip.x==2?1:0);
+                    else if (d==6) b = (ip.y==4||ip.y==2||ip.y==0)?1:(ip.y<2&&ip.x==2||ip.y>2&&ip.x==0?1:0);
+                    else if (d==7) b = (ip.y==4||ip.x==2)?1:0;
+                    else if (d==8) b = (ip.y==4||ip.y==2||ip.y==0)?1:(ip.x==0||ip.x==2?1:0);
+                    else if (d==9) b = (ip.y==4||ip.y==2||ip.y==0)?1:(ip.y>2&&ip.x==0||ip.x==2?1:0);
+                }
+                return float(b);
+            }
+
+            float drawString(vec2 uv, vec2 pos, float scale, int chars[11], int len) {
+                vec2 p = (uv - pos) / scale;
+                float col = 0.0;
+                for(int i = 0; i < 13; i++) {
+                    if (i >= len) break;
+                    col += printChar(p - vec2(float(i * 4), 0.0), chars[i]);
+                }
+                return clamp(col, 0.0, 1.0);
+            }
+
+            float drawRes(vec2 uv, vec2 pos, float scale, int chars[13], int len) {
+                vec2 p = (uv - pos) / scale;
+                float col = 0.0;
+                for(int i = 0; i < 13; i++) {
+                    if (i >= len) break;
+                    col += printChar(p - vec2(float(i * 4), 0.0), chars[i]);
+                }
+                return clamp(col, 0.0, 1.0);
+            }
+
+            vec4 testcard(vec2 uv, vec2 res) {
+                uv = uv * 576.0 / cw;
+                ivec2 i = ivec2(round(abs(uv)));
+                ivec2 j = ivec2(floor(abs(uv)));
+                vec2 lines = ppfract(uv) - 0.5;
+                lines = vec2(line(lines.x), line(lines.y));
+                vec3 b = GRID_BG_COLOR;
+                if (i.x <= 8 && i.y <= 6) {
+                    vec3 m = mix(vec3(0.0, 0.085, -0.435), vec3(-0.237, 0.125, 0.0), float(uv.x < 0.0));
+                    m = mix(m, vec3(-0.14, 0.0, 0.36), lt(abs(uv.x), 6.5));
+                    m *= aasign(uv.y);
+                    m *= float(i.y < 6 && i.x / 2 == 3 && (i.x != 6 || i.y >= 4));
+                    b = GRID_BG_COLOR + m;
+                    lines.y *= float(!(i.x == 7 && j.y <= 4) && !(i.x == 6 && j.y == 4));
+                    lines.x *= float(!(j.x == 6 && i.y / 2 == 2));
+                }
+                float gridMask = clamp(lines.x + lines.y, 0.0, 1.0);
+                b = mix(b, GRID_LINE_COLOR, gridMask);
+                vec3 c;
+                vec3 cc[2];
+                vec2 rw = fract((uv.y + vec2(1.0, 0.0)) * 0.5) * 2.0 - 1.0;
+                ivec2 r = ivec2(round(uv.y - rw));
+                for (int rn = 0; rn < 2; ++rn) {
+                    int row = r[rn];
+                    c = vec3(line(uv.x) + line(uv.y) + lines.x);
+                    switch (row) {
+                        case 6: c = vec3(1); break;
+                        case 5: c = vec3(lt(-abs(uv.x), -1.0)); break;
+                        case 4: case -4: c = vec3(abs(lt(abs(uv.x), 3.0) - lt(uv.y, 0.0))); c *= 1.0 - line(uv.x + 2.5); break;
+                        case 3: c = vec3(mix(0.25, 1.0, lt(sin1mhz(uv.x * 0.25), 0.0))); break;
+                        case 1: case 2: c = vec3(lt(-sinpi(uv.x / 4.0), 0.0), lt(uv.x, 0.0), lt(-sinpi(uv.x / 2.0), 0.0)) * 0.7125 + 0.2375; centre(c, uv.x, row); break;
+                        case -1: case -2: float w = floor(uv.x / 2.0) + 3.0; w += 1.5; c = vec3(sin1mhz(uv.x * w) * 0.5 + 0.5); centre(c, uv.x, row); break;
+                        case -3: c = vec3(1.0); for (int t = -2; t <= 2; t++) c -= lt(uv.x / 2.0, float(t)) * 0.2; break;
+                        case -5: case -6: c = vec3(1, lt(-abs(uv.x), -0.5), 0) * 0.7125 + 0.2375;
+                    }
+                    cc[rn] = c;
+                }
+                rw = abs(rw);
+                c = mix(cc[0], cc[1], lt(rw[1] - rw[0], 0.0));
+                b = mix(b, c, lt(length(uv), 6.0));
+                
+                int ndi[11] = int[11](78, 68, 73, 45, 66, 82, 79, 87, 83, 69, 82);
+                vec2 textUv = uv * cw;
+                float titleMask = drawString(textUv, vec2(-116.0, 156.0), 5.4, ndi, 11);
+                b = mix(b, vec3(0.0), titleMask);
+                
+                int width = int(res.x);
+                int height = int(res.y);
+                int resArr[13];
+                for(int idx = 0; idx < 13; idx++) resArr[idx] = 32;
+                int len = 0;
+                int tempW = width;
+                int digitsW[5];
+                int dwCount = 0;
+                for(int k=0; k<5; k++) {
+                    if(tempW == 0 && dwCount > 0) break;
+                    digitsW[dwCount++] = tempW - (tempW / 10) * 10;
+                    tempW /= 10;
+                }
+                for(int k=0; k<dwCount; k++) {
+                    resArr[len++] = 48 + digitsW[dwCount - 1 - k];
+                }
+                resArr[len++] = 32;
+                resArr[len++] = 120;
+                resArr[len++] = 32;
+                int tempH = height;
+                int digitsH[5];
+                int dhCount = 0;
+                for(int k=0; k<5; k++) {
+                    if(tempH == 0 && dhCount > 0) break;
+                    digitsH[dhCount++] = tempH - (tempH / 10) * 10;
+                    tempH /= 10;
+                }
+                for(int k=0; k<dhCount; k++) {
+                    resArr[len++] = 48 + digitsH[dhCount - 1 - k];
+                }
+                float resMask = drawRes(textUv, vec2(-float(len) * 10.0, -180.0), 5.0, resArr, len);
+                b = mix(b, vec3(1.0), resMask);
+                vec4 b4 = vec4(b, 1);
+
+                b4 *= lt(abs(uv.x), 512.0 / cw);
+                return b4;
+            }
+        void main() {
+            vec2 uv = (gl_FragCoord.xy - iResolution.xy * 0.5) / iResolution.y;
+            fragColor = testcard(uv, iResolution.xy);
+        }
+`;
+
+// --- WebGL Setup e Rendering ---
+const canvas = document.getElementById('glcanvas');
+const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+if (!gl) {
+alert('WebGL non è supportato dal tuo browser.');
+}
+// Funzione per compilare gli shader
+function createShader(gl, type, source) {
+const shader = gl.createShader(type);
+gl.shaderSource(shader, source);
+gl.compileShader(shader);
+if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+console.error("Errore compilazione shader:", gl.getShaderInfoLog(shader));
+gl.deleteShader(shader);
+return null;
+}
+return shader;
+}
+const vertexShader = createShader(gl, gl.VERTEX_SHADER, vsSource);
+const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+const program = gl.createProgram();
+gl.attachShader(program, vertexShader);
+gl.attachShader(program, fragmentShader);
+gl.linkProgram(program);
+if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+console.error("Errore di linking del programma:", gl.getProgramInfoLog(program));
+}
+const positionAttributeLocation = gl.getAttribLocation(program, "position");
+const positionBuffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+const positions = [
+-1, -1,
+1, -1,
+-1,  1,
+-1,  1,
+1, -1,
+1,  1,
+];
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+// Gestione compatibilità WebGL 1 / WebGL 2 per i Vertex Array Objects (VAO)
+let vao;
+if (gl.createVertexArray) {
+vao = gl.createVertexArray();
+gl.bindVertexArray(vao);
+}
+gl.enableVertexAttribArray(positionAttributeLocation);
+gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+const resolutionLocation = gl.getUniformLocation(program, "iResolution");
+function render() {
+if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
+canvas.width = canvas.clientWidth;
+canvas.height = canvas.clientHeight;
+gl.viewport(0, 0, canvas.width, canvas.height);
+}
+gl.clearColor(0, 0, 0, 1);
+gl.clear(gl.COLOR_BUFFER_BIT);
+gl.useProgram(program);
+if (vao) gl.bindVertexArray(vao);
+gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+gl.drawArrays(gl.TRIANGLES, 0, 6);
+requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+
+
+</script>
+<body>

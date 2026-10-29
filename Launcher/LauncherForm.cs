@@ -65,7 +65,7 @@ public sealed class LauncherForm : Form
             throw new ArgumentNullException(nameof(initialSettings));
         }
 
-        Text = "Tractus HtmlToNdi Launcher";
+        Text = "NDI-Browser Launcher";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;

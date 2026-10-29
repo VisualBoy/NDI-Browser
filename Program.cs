@@ -407,6 +407,8 @@ public class Program
                 AsyncContext.Run(async delegate
                 {
                     var settings = new CefSettings();
+                    settings.WindowlessRenderingEnabled = true;
+
                     if (!Directory.Exists(launchCachePath))
                     {
                         Directory.CreateDirectory(launchCachePath);
@@ -418,7 +420,7 @@ public class Program
                     var targetWindowlessRate = windowlessFrameRateOverride ?? Math.Clamp((int)Math.Round(frameRate.Value), 1, 240);
                     settings.CefCommandLineArgs.Add("off-screen-frame-rate", targetWindowlessRate.ToString(CultureInfo.InvariantCulture));
 
-                    // GPU acceleration & WebGL optimizations (active by default)
+                    // GPU acceleration & WebGL optimizations (always on)
                     settings.CefCommandLineArgs["ignore-gpu-blocklist"] = "1";
                     settings.CefCommandLineArgs["enable-gpu-rasterization"] = "1";
                     settings.CefCommandLineArgs["enable-zero-copy"] = "1";
@@ -428,12 +430,21 @@ public class Program
                     settings.CefCommandLineArgs["disable-background-timer-throttling"] = "1";
                     settings.CefCommandLineArgs["disable-renderer-backgrounding"] = "1";
                     settings.CefCommandLineArgs["enable-webgl"] = "1";
+                    settings.CefCommandLineArgs["use-angle"] = "";
                     settings.CefCommandLineArgs["enable-accelerated-2d-canvas"] = "1";
                     settings.CefCommandLineArgs["enable-accelerated-video-decode"] = "1";
 
                     // Auto-grant media stream (webcam, mic)
                     settings.CefCommandLineArgs["enable-media-stream"] = "1";
                     settings.CefCommandLineArgs["use-fake-ui-for-media-stream"] = "1";
+
+                    // Security & cross-origin policy relaxation for broadcast templates
+                    settings.CefCommandLineArgs["disable-web-security"] = "1";
+                    settings.CefCommandLineArgs["remote-allow-origins"] = "*";
+                    settings.CefCommandLineArgs["no-sandbox"] = "1";
+
+                    // Deterministic frame pacing for broadcast pipelines
+                    settings.CefCommandLineArgs["enable-begin-frame-scheduling"] = "1";
 
                     if (!parameters.DisableAudio)
                     {
