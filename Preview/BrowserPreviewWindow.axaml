@@ -1,0 +1,169 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:preview="using:Tractus.HtmlToNdi.Preview"
+        x:Class="Tractus.HtmlToNdi.Preview.BrowserPreviewWindow"
+        Title="NDI Browser - Interactive Preview"
+        Width="1280" Height="720"
+        MinWidth="480" MinHeight="320"
+        Background="#1E1E1E"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="40"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Styles>
+        <!-- Navigation Button Style -->
+        <Style Selector="Button.NavBtn">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Background" Value="#252525"/>
+            <Setter Property="Foreground" Value="#CCCCCC"/>
+            <Setter Property="BorderBrush" Value="#383838"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style Selector="Button.NavBtn:pointerover">
+            <Setter Property="Background" Value="#323232"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#4A4A4A"/>
+        </Style>
+        <Style Selector="Button.NavBtn:pressed">
+            <Setter Property="Background" Value="#1C1C1C"/>
+        </Style>
+        <Style Selector="Button.NavBtn:disabled">
+            <Setter Property="Opacity" Value="0.4"/>
+        </Style>
+
+        <!-- Window Control Button Style -->
+        <Style Selector="Button.WinBtn">
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#A0A0A0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style Selector="Button.WinBtn:pointerover">
+            <Setter Property="Background" Value="#2A2A2A"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="Button.WinBtn:pressed">
+            <Setter Property="Background" Value="#383838"/>
+        </Style>
+
+        <!-- Close Button Highlight -->
+        <Style Selector="Button.CloseBtn:pointerover">
+            <Setter Property="Background" Value="#E81123"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="Button.CloseBtn:pressed">
+            <Setter Property="Background" Value="#C4101F"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="40, *">
+        <!-- Unified Dark Header / TitleBar / AddressBar -->
+        <Border Grid.Row="0"
+                Background="#141414"
+                BorderBrush="#2D2D2D"
+                BorderThickness="0,0,0,1"
+                PointerPressed="OnTitleBarPointerPressed">
+            <Grid ColumnDefinitions="Auto, Auto, *, Auto" Margin="6,0,0,0">
+
+                <!-- 1. Window Drag Region & Title -->
+                <StackPanel Grid.Column="0"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center"
+                            Margin="4,0,12,0"
+                            Background="Transparent"
+                            PointerPressed="OnTitleBarPointerPressed">
+                    <TextBlock Text="🌐"
+                               FontSize="14"
+                               VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TitleTextBlock"
+                               Text="NDI Browser - Interactive Preview"
+                               Foreground="#E0E0E0"
+                               FontWeight="SemiBold"
+                               FontSize="12"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="350"/>
+                </StackPanel>
+
+                <!-- 2. Navigation Controls -->
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="4"
+                            VerticalAlignment="Center"
+                            Margin="0,0,10,0">
+                    <Button x:Name="BackButton"
+                            Content="◀"
+                            Classes="NavBtn"
+                            ToolTip.Tip="Back"
+                            Click="OnBackClicked"/>
+                    <Button x:Name="ForwardButton"
+                            Content="▶"
+                            Classes="NavBtn"
+                            ToolTip.Tip="Forward"
+                            Click="OnForwardClicked"/>
+                    <Button x:Name="ReloadButton"
+                            Content="⟳"
+                            Classes="NavBtn"
+                            ToolTip.Tip="Reload"
+                            Click="OnReloadClicked"/>
+                </StackPanel>
+
+                <!-- 3. Address Bar Input -->
+                <TextBox Grid.Column="2"
+                         x:Name="AddressTextBox"
+                         Watermark="Enter URL and press Enter..."
+                         VerticalAlignment="Center"
+                         Height="28"
+                         FontSize="12"
+                         CornerRadius="4"
+                         Background="#1E1E1E"
+                         BorderBrush="#333333"
+                         Foreground="#F0F0F0"
+                         Margin="0,0,8,0"
+                         KeyDown="AddressTextBox_KeyDown"
+                         GotFocus="AddressTextBox_GotFocus"/>
+
+                <!-- 4. Window Management Controls (Minimize, Maximize, Close) -->
+                <StackPanel Grid.Column="3"
+                            Orientation="Horizontal"
+                            Spacing="0"
+                            VerticalAlignment="Stretch"
+                            Margin="30,0,0,0">
+                    <Button x:Name="MinimizeButton"
+                            Content="—"
+                            Classes="WinBtn"
+                            ToolTip.Tip="Minimize"
+                            Click="OnMinimizeClicked"/>
+                    <Button x:Name="MaximizeButton"
+                            Content="🗖"
+                            Classes="WinBtn"
+                            ToolTip.Tip="Maximize"
+                            Click="OnMaximizeClicked"/>
+                    <Button x:Name="CloseButton"
+                            Content="✕"
+                            Classes="WinBtn CloseBtn"
+                            ToolTip.Tip="Close"
+                            Click="OnCloseClicked"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- CEF Browser Off-Screen Render View Layer -->
+        <preview:BrowserViewControl Grid.Row="1" x:Name="BrowserView" />
+    </Grid>
+</Window>

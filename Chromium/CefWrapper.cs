@@ -38,7 +38,32 @@ internal class CefWrapper : IDisposable
     private readonly ILogger logger;
     private readonly bool compositorCaptureRequested;
     private CompositorCaptureBridge? compositorCaptureBridge;
-    private BrowserPreviewForm? previewForm;
+    private IBrowserPreviewWindow? previewWindow;
+
+    /// <summary>
+    /// Occurs when the browser address (URL) changes.
+    /// </summary>
+    public event Action<string>? AddressChanged;
+
+    /// <summary>
+    /// Occurs when the browser document title changes.
+    /// </summary>
+    public event Action<string>? TitleChanged;
+
+    /// <summary>
+    /// Occurs when navigation history state changes (canGoBack, canGoForward).
+    /// </summary>
+    public event Action<bool, bool>? NavigationStateChanged;
+
+    /// <summary>
+    /// Gets a value indicating whether the browser can navigate back.
+    /// </summary>
+    public bool CanGoBack => this.browser?.CanGoBack ?? false;
+
+    /// <summary>
+    /// Gets a value indicating whether the browser can navigate forward.
+    /// </summary>
+    public bool CanGoForward => this.browser?.CanGoForward ?? false;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CefWrapper"/> class.
@@ -65,6 +90,22 @@ internal class CefWrapper : IDisposable
         {
             AudioHandler = new CustomAudioHandler(),
             PermissionHandler = new CustomPermissionHandler(this.logger),
+        };
+
+        this.browser.AddressChanged += (s, e) =>
+        {
+            this.Url = e.Address;
+            this.AddressChanged?.Invoke(e.Address);
+        };
+
+        this.browser.TitleChanged += (s, e) =>
+        {
+            this.TitleChanged?.Invoke(e.Title);
+        };
+
+        this.browser.LoadingStateChanged += (s, e) =>
+        {
+            this.NavigationStateChanged?.Invoke(e.CanGoBack, e.CanGoForward);
         };
 
         this.browser.Size = new System.Drawing.Size(this.Width, this.Height);
@@ -171,7 +212,7 @@ internal class CefWrapper : IDisposable
             DateTime.UtcNow);
         this.videoPipeline.HandleFrame(capturedFrame);
 
-        this.previewForm?.UpdateFrame(e.BufferHandle, e.Width, e.Height);
+        this.previewWindow?.UpdateFrame(e.BufferHandle, e.Width, e.Height);
     }
 
     /// <summary>
@@ -237,7 +278,7 @@ internal class CefWrapper : IDisposable
         {
             if (frame.StorageKind == CapturedFrameStorageKind.CpuMemory)
             {
-                this.previewForm?.UpdateFrame(frame.Buffer, frame.Width, frame.Height);
+                this.previewWindow?.UpdateFrame(frame.Buffer, frame.Width, frame.Height);
             }
 
             this.videoPipeline.HandleCompositorFrame(frame);
@@ -304,7 +345,7 @@ internal class CefWrapper : IDisposable
                 }
 
                 this.browser = null;
-                this.previewForm = null;
+                this.previewWindow = null;
                 this.framePump?.Dispose();
                 this.videoPipeline.Dispose();
             }
@@ -431,20 +472,59 @@ internal class CefWrapper : IDisposable
     }
 
     /// <summary>
-    /// Attaches an interactive preview form to receive live frames.
+    /// Navigates back in the browser history if available.
+    /// </summary>
+    public void GoBack()
+    {
+        if (this.browser?.CanGoBack == true)
+        {
+            this.browser.Back();
+        }
+    }
+
+    /// <summary>
+    /// Navigates forward in the browser history if available.
+    /// </summary>
+    public void GoForward()
+    {
+        if (this.browser?.CanGoForward == true)
+        {
+            this.browser.Forward();
+        }
+    }
+
+    /// <summary>
+    /// Attaches an interactive preview window to receive live frames.
+    /// </summary>
+    /// <param name="window">The preview window instance.</param>
+    public void AttachPreview(IBrowserPreviewWindow window)
+    {
+        this.previewWindow = window;
+    }
+
+    /// <summary>
+    /// Detaches the interactive preview window.
+    /// </summary>
+    public void DetachPreview()
+    {
+        this.previewWindow = null;
+    }
+
+    /// <summary>
+    /// Attaches an interactive preview form to receive live frames (WinForms compatibility).
     /// </summary>
     /// <param name="form">The preview form instance.</param>
     public void AttachPreviewForm(BrowserPreviewForm form)
     {
-        this.previewForm = form;
+        this.previewWindow = form;
     }
 
     /// <summary>
-    /// Detaches the interactive preview form.
+    /// Detaches the interactive preview form (WinForms compatibility).
     /// </summary>
     public void DetachPreviewForm()
     {
-        this.previewForm = null;
+        this.previewWindow = null;
     }
 
     /// <summary>

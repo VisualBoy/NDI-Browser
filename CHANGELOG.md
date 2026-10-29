@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2026-10-29]
+
+### Added
+- **Integrated Dark Mode Navigation Bar & Custom Window Frame (Avalonia UI):**
+  - Migrated the desktop preview window to Avalonia UI with `Semi.Avalonia` dark theme styling.
+  - Extended client area into the title bar (`ExtendClientAreaToDecorationsHint="True"` and `ExtendClientAreaChromeHints="NoChrome"`) with full drag support on empty title bar regions.
+  - Implemented unified dark header bar (`#141414` background, `#2D2D2D` border) integrating:
+    - Dynamic application title section: `[Page Title] - NDI Browser (WidthxHeight)` with icon.
+    - Navigation buttons: Back (`◀`), Forward (`▶`), and Reload (`⟳`) with history state tracking.
+    - Responsive dark address bar with rounded corners (`CornerRadius="4"`), auto-selection on focus, bi-directional URL synchronization on `AddressChanged`, and Enter key submission without keystroke leaking to OSR.
+    - Window management controls: Minimize (`—`), Maximize/Restore (`🗖`/`🗗`), and Close (`✕`) with red hover highlight (`#E81123`).
+  - Added [`BrowserViewControl`](Preview/BrowserViewControl.cs) for hardware-accelerated Skia rendering of CEF OSR BGRA frame buffers and pointer/keyboard input forwarding.
+  - Introduced [`IBrowserPreviewWindow`](Chromium/IBrowserPreviewWindow.cs) abstraction to decouple preview presentation from the core Chromium rendering pipeline.
+
 ## [2026-10-27]
 
 ### Added

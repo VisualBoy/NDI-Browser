@@ -1,3 +1,5 @@
+using Avalonia;
+using Application = System.Windows.Forms.Application;
 using CefSharp;
 using CefSharp.OffScreen;
 using Microsoft.AspNetCore.Builder;
@@ -37,7 +39,6 @@ public class Program
     public static nint NdiSenderPtr;
     internal static CefWrapper browserWrapper = null!;
     private static Thread? previewUiThread;
-    private static BrowserPreviewForm? previewFormInstance;
 
     private static readonly object NdiLibraryLock = new();
     private static bool NdiLibraryConfigured;
@@ -162,16 +163,20 @@ public class Program
 
     private static void StartInteractivePreview(CefWrapper wrapper, int width, int height)
     {
-        Log.Information("Launching interactive desktop preview window");
+        Log.Information("Launching interactive desktop preview window (Avalonia)");
         previewUiThread = new Thread(() =>
         {
             try
             {
-                Application.EnableVisualStyles();
-                Application.SetCompatibleTextRenderingDefault(false);
-                previewFormInstance = new BrowserPreviewForm(wrapper, width, height, Log.Logger);
-                wrapper.AttachPreviewForm(previewFormInstance);
-                Application.Run(previewFormInstance);
+                Tractus.HtmlToNdi.Preview.PreviewApp.PendingWrapper = wrapper;
+                Tractus.HtmlToNdi.Preview.PreviewApp.PendingWidth = width;
+                Tractus.HtmlToNdi.Preview.PreviewApp.PendingHeight = height;
+                Tractus.HtmlToNdi.Preview.PreviewApp.PendingLogger = Log.Logger;
+
+                Avalonia.AppBuilder.Configure<Tractus.HtmlToNdi.Preview.PreviewApp>()
+                    .UsePlatformDetect()
+                    .WithInterFont()
+                    .StartWithClassicDesktopLifetime(Array.Empty<string>(), Avalonia.Controls.ShutdownMode.OnMainWindowClose);
             }
             catch (Exception ex)
             {
@@ -179,8 +184,7 @@ public class Program
             }
             finally
             {
-                wrapper.DetachPreviewForm();
-                previewFormInstance = null;
+                wrapper.DetachPreview();
             }
         })
         {
@@ -439,12 +443,12 @@ public class Program
                     settings.CefCommandLineArgs["use-fake-ui-for-media-stream"] = "1";
 
                     // Security & cross-origin policy relaxation for broadcast templates
-                    settings.CefCommandLineArgs["disable-web-security"] = "1";
+                    //settings.CefCommandLineArgs["disable-web-security"] = "1";
                     settings.CefCommandLineArgs["remote-allow-origins"] = "*";
                     settings.CefCommandLineArgs["no-sandbox"] = "1";
 
                     // Deterministic frame pacing for broadcast pipelines
-                    settings.CefCommandLineArgs["enable-begin-frame-scheduling"] = "1";
+                    settings.CefCommandLineArgs["enable-begin-frame-scheduling"] = "0";
 
                     if (!parameters.DisableAudio)
                     {
@@ -676,11 +680,11 @@ public class Program
         }
         finally
         {
-            if (previewFormInstance is { IsDisposed: false } form)
+            if (Tractus.HtmlToNdi.Preview.PreviewApp.PreviewWindowInstance is { } previewWin)
             {
                 try
                 {
-                    form.BeginInvoke((Action)form.Close);
+                    Avalonia.Threading.Dispatcher.UIThread.Post(previewWin.Close);
                 }
                 catch
                 {

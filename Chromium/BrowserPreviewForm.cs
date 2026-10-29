@@ -12,7 +12,7 @@ namespace Tractus.HtmlToNdi.Chromium;
 /// Provides an interactive desktop preview window that renders the off-screen browser output
 /// and forwards mouse and keyboard user interactions into Chromium.
 /// </summary>
-public sealed class BrowserPreviewForm : Form
+public sealed class BrowserPreviewForm : Form, IBrowserPreviewWindow
 {
     private readonly CefWrapper wrapper;
     private readonly ILogger logger;

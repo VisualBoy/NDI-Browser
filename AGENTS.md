@@ -111,12 +111,17 @@ Launcher/
   LauncherSettings*.cs               # JSON persistence for launcher defaults
 Chromium/
   AsyncContext.cs                    # Single-threaded async pump for CefSharp startup
-  BrowserPreviewForm.cs              # Interactive WinForms preview window with input forwarding into CEF OSR
+  BrowserPreviewForm.cs              # Interactive WinForms preview window fallback
+  IBrowserPreviewWindow.cs           # Preview window abstraction for frame updates
   CustomPermissionHandler.cs         # IPermissionHandler auto-granting webcam, microphone, and permission prompts
   FramePump.cs                       # Periodic/on-demand invalidator with watchdog and cadence adaptation
   CefWrapper.cs                      # Owns ChromiumWebBrowser instance, paint/compositor bridge, HTTP input helpers
   CustomAudioHandler.cs              # IAudioHandler implementation, planar float → pseudo-interleaved buffer → NDI audio
   SingleThreadSynchronizationContext.cs # BlockingCollection-backed synchronization context
+Preview/
+  BrowserPreviewWindow.axaml(.cs)    # Frameless Avalonia preview window with unified dark header and navigation
+  BrowserViewControl.cs              # Avalonia custom control rendering CefSharp OSR frames with input forwarding
+  PreviewApp.axaml(.cs)              # Avalonia preview application bootstrap with Semi.Avalonia dark theme
 Video/
   CapturedFrame.cs                   # Captured frame metadata (monotonic + UTC timestamps, storage kind)
   CapturedFrameStorageKind.cs        # Describes CPU vs shared-texture/shared-memory payloads
