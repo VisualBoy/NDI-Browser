@@ -37,6 +37,10 @@ public sealed class LauncherForm : Form
     private readonly CheckBox _enableOutOfProcessRasterizationCheckBox;
     private readonly CheckBox _disableBackgroundThrottlingCheckBox;
     private readonly CheckBox _presetHighPerformanceCheckBox;
+    private readonly CheckBox _forceHighPerformanceGpuCheckBox;
+    private readonly CheckBox _enableBeginFrameSchedulingCheckBox;
+    private readonly CheckBox _disableNewContentRenderingDelayCheckBox;
+    private readonly TextBox _cefExtraArgsTextBox;
     private readonly ComboBox _pacingModeComboBox;
     private readonly CheckBox _ndiSendAsyncCheckBox;
     private readonly CheckBox _enablePreviewCheckBox;
@@ -74,23 +78,38 @@ public sealed class LauncherForm : Form
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
         Padding = new Padding(12);
 
-        var table = new TableLayoutPanel
+        var mainLayout = new TableLayoutPanel
+        {
+            ColumnCount = 1,
+            RowCount = 3,
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = new Padding(0),
+        };
+        mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        Controls.Add(mainLayout);
+
+        // General settings table
+        var generalTable = new TableLayoutPanel
         {
             ColumnCount = 2,
             RowCount = 0,
             Dock = DockStyle.Fill,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Padding = new Padding(0),
+            Padding = new Padding(0, 0, 0, 8),
         };
-
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45));
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55));
-
-        Controls.Add(table);
+        generalTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40));
+        generalTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60));
 
         _ndiNameTextBox = new TextBox { Dock = DockStyle.Fill };
-        AddRow(table, "NDI Source Name", _ndiNameTextBox);
+        AddRow(generalTable, "NDI Source Name", _ndiNameTextBox);
+
+        _urlTextBox = new TextBox { Dock = DockStyle.Fill };
+        AddRow(generalTable, "Startup URL", _urlTextBox);
 
         _portNumericUpDown = new NumericUpDown
         {
@@ -99,10 +118,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             Increment = 1,
         };
-        AddRow(table, "HTTP Port", _portNumericUpDown);
-
-        _urlTextBox = new TextBox { Dock = DockStyle.Fill };
-        AddRow(table, "Startup URL", _urlTextBox);
+        AddRow(generalTable, "HTTP Port", _portNumericUpDown);
 
         _widthNumericUpDown = new NumericUpDown
         {
@@ -111,7 +127,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             Increment = 1,
         };
-        AddRow(table, "Width", _widthNumericUpDown);
+        AddRow(generalTable, "Width", _widthNumericUpDown);
 
         _heightNumericUpDown = new NumericUpDown
         {
@@ -120,12 +136,47 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             Increment = 1,
         };
-        AddRow(table, "Height", _heightNumericUpDown);
+        AddRow(generalTable, "Height", _heightNumericUpDown);
 
         _frameRateTextBox = new TextBox { Dock = DockStyle.Fill };
-        AddRow(table, "Frame Rate (fps)", _frameRateTextBox);
+        AddRow(generalTable, "Frame Rate (fps)", _frameRateTextBox);
 
-        AddSectionHeader(table, "Pacing");
+        _enablePreviewCheckBox = new CheckBox
+        {
+            Text = "Show interactive preview window",
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+        };
+        AddRow(generalTable, "Preview Window", _enablePreviewCheckBox);
+
+        mainLayout.Controls.Add(generalTable, 0, 0);
+
+        // TabControl for advanced options
+        var tabControl = new TabControl
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            Margin = new Padding(0, 4, 0, 8),
+        };
+
+        // Tab: Pacing & Buffering
+        var pacingTabPage = new TabPage("Pacing & Buffering")
+        {
+            UseVisualStyleBackColor = true,
+            Padding = new Padding(8),
+            AutoScroll = true,
+        };
+        var pacingTable = new TableLayoutPanel
+        {
+            ColumnCount = 2,
+            RowCount = 0,
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+        };
+        pacingTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45));
+        pacingTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55));
+        pacingTabPage.Controls.Add(pacingTable);
 
         _pacingModeComboBox = new ComboBox
         {
@@ -133,7 +184,7 @@ public sealed class LauncherForm : Form
             DropDownStyle = ComboBoxStyle.DropDownList
         };
         _pacingModeComboBox.Items.AddRange(Enum.GetNames(typeof(PacingMode)));
-        AddRow(table, "Pacing Mode", _pacingModeComboBox);
+        AddRow(pacingTable, "Pacing Mode", _pacingModeComboBox);
 
         _enableBufferingCheckBox = new CheckBox
         {
@@ -141,7 +192,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "Output Buffer", _enableBufferingCheckBox);
+        AddRow(pacingTable, "Output Buffer", _enableBufferingCheckBox);
 
         _bufferDepthNumericUpDown = new NumericUpDown
         {
@@ -150,7 +201,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             Increment = 1,
         };
-        AddRow(table, "Buffer Depth (frames)", _bufferDepthNumericUpDown);
+        AddRow(pacingTable, "Buffer Depth (frames)", _bufferDepthNumericUpDown);
 
         _allowLatencyExpansionCheckBox = new CheckBox
         {
@@ -158,7 +209,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "Latency Expansion", _allowLatencyExpansionCheckBox);
+        AddRow(pacingTable, "Latency Expansion", _allowLatencyExpansionCheckBox);
 
         _telemetryNumericUpDown = new NumericUpDown
         {
@@ -168,7 +219,7 @@ public sealed class LauncherForm : Form
             Increment = 0.5M,
             Dock = DockStyle.Fill,
         };
-        AddRow(table, "Telemetry Interval (s)", _telemetryNumericUpDown);
+        AddRow(pacingTable, "Telemetry Interval (s)", _telemetryNumericUpDown);
 
         var stopwatchPrecisionNs = 1_000_000_000d / Stopwatch.Frequency;
         var clockPrecisionText = System.FormattableString.Invariant(
@@ -181,7 +232,7 @@ public sealed class LauncherForm : Form
             AutoSize = true,
             Padding = new Padding(0, 4, 0, 4)
         };
-        AddRow(table, "Clock Precision", _clockPrecisionLabel);
+        AddRow(pacingTable, "Clock Precision", _clockPrecisionLabel);
 
         _alignWithCaptureTimestampsCheckBox = new CheckBox
         {
@@ -189,7 +240,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "Capture Alignment", _alignWithCaptureTimestampsCheckBox);
+        AddRow(pacingTable, "Capture Alignment", _alignWithCaptureTimestampsCheckBox);
 
         _enableCadenceTelemetryCheckBox = new CheckBox
         {
@@ -197,7 +248,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "Cadence Telemetry", _enableCadenceTelemetryCheckBox);
+        AddRow(pacingTable, "Cadence Telemetry", _enableCadenceTelemetryCheckBox);
 
         _enablePacedInvalidationCheckBox = new CheckBox
         {
@@ -205,7 +256,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "Paced Invalidation", _enablePacedInvalidationCheckBox);
+        AddRow(pacingTable, "Paced Invalidation", _enablePacedInvalidationCheckBox);
 
         _disablePacedInvalidationCheckBox = new CheckBox
         {
@@ -213,7 +264,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "Disable Pacing", _disablePacedInvalidationCheckBox);
+        AddRow(pacingTable, "Disable Pacing", _disablePacedInvalidationCheckBox);
 
         _enableCaptureBackpressureCheckBox = new CheckBox
         {
@@ -221,7 +272,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "Capture Backpressure", _enableCaptureBackpressureCheckBox);
+        AddRow(pacingTable, "Capture Backpressure", _enableCaptureBackpressureCheckBox);
 
         _enablePumpCadenceAdaptationCheckBox = new CheckBox
         {
@@ -229,7 +280,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "Pump Cadence Adaptation", _enablePumpCadenceAdaptationCheckBox);
+        AddRow(pacingTable, "Pump Cadence Adaptation", _enablePumpCadenceAdaptationCheckBox);
 
         _smoothnessPumpAtWindowlessRateCheckBox = new CheckBox
         {
@@ -237,7 +288,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "Smoothness Pump Cadence", _smoothnessPumpAtWindowlessRateCheckBox);
+        AddRow(pacingTable, "Smoothness Pump Cadence", _smoothnessPumpAtWindowlessRateCheckBox);
 
         _enableCompositorCaptureCheckBox = new CheckBox
         {
@@ -245,12 +296,10 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "Compositor Capture (Experimental)", _enableCompositorCaptureCheckBox);
+        AddRow(pacingTable, "Compositor Capture (Experimental)", _enableCompositorCaptureCheckBox);
 
         _windowlessFrameRateTextBox = new TextBox { Dock = DockStyle.Fill };
-        AddRow(table, "Windowless Frame Rate", _windowlessFrameRateTextBox);
-
-        AddSectionHeader(table, "NDI SDK");
+        AddRow(pacingTable, "Windowless Frame Rate", _windowlessFrameRateTextBox);
 
         _ndiSendAsyncCheckBox = new CheckBox
         {
@@ -258,9 +307,28 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "Asynchronous Sending", _ndiSendAsyncCheckBox);
+        AddRow(pacingTable, "Asynchronous Sending", _ndiSendAsyncCheckBox);
 
-        AddSectionHeader(table, "Chromium Performance Flags");
+        tabControl.TabPages.Add(pacingTabPage);
+
+        // Tab: Performance & CEF
+        var perfTabPage = new TabPage("Performance & CEF")
+        {
+            UseVisualStyleBackColor = true,
+            Padding = new Padding(8),
+            AutoScroll = true,
+        };
+        var perfTable = new TableLayoutPanel
+        {
+            ColumnCount = 2,
+            RowCount = 0,
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+        };
+        perfTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45));
+        perfTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55));
+        perfTabPage.Controls.Add(perfTable);
 
         _presetHighPerformanceCheckBox = new CheckBox
         {
@@ -268,7 +336,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "Preset", _presetHighPerformanceCheckBox);
+        AddRow(perfTable, "Preset", _presetHighPerformanceCheckBox);
 
         _enableGpuRasterizationCheckBox = new CheckBox
         {
@@ -276,7 +344,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "GPU Rasterization", _enableGpuRasterizationCheckBox);
+        AddRow(perfTable, "GPU Rasterization", _enableGpuRasterizationCheckBox);
 
         _enableZeroCopyCheckBox = new CheckBox
         {
@@ -284,7 +352,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "Zero-Copy", _enableZeroCopyCheckBox);
+        AddRow(perfTable, "Zero-Copy", _enableZeroCopyCheckBox);
 
         _enableOutOfProcessRasterizationCheckBox = new CheckBox
         {
@@ -292,7 +360,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "OOP Rasterizer", _enableOutOfProcessRasterizationCheckBox);
+        AddRow(perfTable, "OOP Rasterizer", _enableOutOfProcessRasterizationCheckBox);
 
         _disableGpuVsyncCheckBox = new CheckBox
         {
@@ -300,7 +368,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "GPU VSync", _disableGpuVsyncCheckBox);
+        AddRow(perfTable, "GPU VSync", _disableGpuVsyncCheckBox);
 
         _disableFrameRateLimitCheckBox = new CheckBox
         {
@@ -308,7 +376,7 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "Frame Rate Limit", _disableFrameRateLimitCheckBox);
+        AddRow(perfTable, "Frame Rate Limit", _disableFrameRateLimitCheckBox);
 
         _disableBackgroundThrottlingCheckBox = new CheckBox
         {
@@ -316,15 +384,42 @@ public sealed class LauncherForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "Background Throttling", _disableBackgroundThrottlingCheckBox);
+        AddRow(perfTable, "Background Throttling", _disableBackgroundThrottlingCheckBox);
 
-        _enablePreviewCheckBox = new CheckBox
+        _forceHighPerformanceGpuCheckBox = new CheckBox
         {
-            Text = "Show interactive preview window",
+            Text = "Force high-performance GPU",
             Dock = DockStyle.Fill,
             AutoSize = true,
         };
-        AddRow(table, "Preview Window", _enablePreviewCheckBox);
+        AddRow(perfTable, "Force Dedicated GPU", _forceHighPerformanceGpuCheckBox);
+
+        _enableBeginFrameSchedulingCheckBox = new CheckBox
+        {
+            Text = "Enable begin-frame scheduling",
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+        };
+        AddRow(perfTable, "Begin-Frame Scheduling", _enableBeginFrameSchedulingCheckBox);
+
+        _disableNewContentRenderingDelayCheckBox = new CheckBox
+        {
+            Text = "Disable new content rendering delay",
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+        };
+        AddRow(perfTable, "Rendering Delay", _disableNewContentRenderingDelayCheckBox);
+
+        _cefExtraArgsTextBox = new TextBox
+        {
+            Dock = DockStyle.Fill,
+            PlaceholderText = "flag1=val1;flag2=val2"
+        };
+        AddRow(perfTable, "CEF Extra Args", _cefExtraArgsTextBox);
+
+        tabControl.TabPages.Add(perfTabPage);
+
+        mainLayout.Controls.Add(tabControl, 0, 1);
 
         var buttonPanel = new FlowLayoutPanel
         {
@@ -353,10 +448,7 @@ public sealed class LauncherForm : Form
         buttonPanel.Controls.Add(launchButton);
         buttonPanel.Controls.Add(cancelButton);
 
-        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        table.Controls.Add(new Panel(), 0, table.RowCount);
-        table.Controls.Add(buttonPanel, 1, table.RowCount);
-        table.RowCount++;
+        mainLayout.Controls.Add(buttonPanel, 0, 2);
 
         AcceptButton = launchButton;
         CancelButton = cancelButton;
@@ -406,8 +498,16 @@ public sealed class LauncherForm : Form
         _enableOutOfProcessRasterizationCheckBox.Checked = settings.EnableOutOfProcessRasterization;
         _disableBackgroundThrottlingCheckBox.Checked = settings.DisableBackgroundThrottling;
         _presetHighPerformanceCheckBox.Checked = settings.PresetHighPerformance;
+        _forceHighPerformanceGpuCheckBox.Checked = settings.ForceHighPerformanceGpu;
+        _enableBeginFrameSchedulingCheckBox.Checked = settings.EnableBeginFrameScheduling;
+        _disableNewContentRenderingDelayCheckBox.Checked = settings.DisableNewContentRenderingDelay;
+        _cefExtraArgsTextBox.Text = settings.CefExtraArgs ?? string.Empty;
         _suppressPacingModeUpdates = true;
         _pacingModeComboBox.SelectedItem = settings.PacingMode.ToString();
+        if (_pacingModeComboBox.SelectedIndex < 0 && _pacingModeComboBox.Items.Count > 0)
+        {
+            _pacingModeComboBox.SelectedIndex = 0;
+        }
         _suppressPacingModeUpdates = false;
         _ndiSendAsyncCheckBox.Checked = settings.NdiSendAsync;
         _enablePreviewCheckBox.Checked = settings.EnablePreview;
@@ -599,6 +699,10 @@ public sealed class LauncherForm : Form
             EnableOutOfProcessRasterization = _enableOutOfProcessRasterizationCheckBox.Checked,
             DisableBackgroundThrottling = _disableBackgroundThrottlingCheckBox.Checked,
             PresetHighPerformance = _presetHighPerformanceCheckBox.Checked,
+            ForceHighPerformanceGpu = _forceHighPerformanceGpuCheckBox.Checked,
+            EnableBeginFrameScheduling = _enableBeginFrameSchedulingCheckBox.Checked,
+            DisableNewContentRenderingDelay = _disableNewContentRenderingDelayCheckBox.Checked,
+            CefExtraArgs = string.IsNullOrWhiteSpace(_cefExtraArgsTextBox.Text) ? null : _cefExtraArgsTextBox.Text.Trim(),
             PacingMode = Enum.Parse<PacingMode>(pacingModeSelection),
             NdiSendAsync = _ndiSendAsyncCheckBox.Checked,
             EnablePreview = _enablePreviewCheckBox.Checked

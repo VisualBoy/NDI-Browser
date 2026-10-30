@@ -429,10 +429,33 @@ public class Program
                     settings.CefCommandLineArgs["enable-gpu-rasterization"] = "1";
                     settings.CefCommandLineArgs["enable-zero-copy"] = "1";
                     settings.CefCommandLineArgs["enable-oop-rasterization"] = "1";
-                    settings.CefCommandLineArgs["disable-gpu-vsync"] = "1";
-                    settings.CefCommandLineArgs["disable-frame-rate-limit"] = "1";
-                    settings.CefCommandLineArgs["disable-background-timer-throttling"] = "1";
-                    settings.CefCommandLineArgs["disable-renderer-backgrounding"] = "1";
+
+                    if (parameters.DisableGpuVsync || useHighPerformancePreset)
+                    {
+                        settings.CefCommandLineArgs["disable-gpu-vsync"] = "1";
+                    }
+
+                    if (parameters.DisableFrameRateLimit || useHighPerformancePreset)
+                    {
+                        settings.CefCommandLineArgs["disable-frame-rate-limit"] = "1";
+                    }
+
+                    if (parameters.DisableBackgroundThrottling || useHighPerformancePreset)
+                    {
+                        settings.CefCommandLineArgs["disable-background-timer-throttling"] = "1";
+                        settings.CefCommandLineArgs["disable-renderer-backgrounding"] = "1";
+                    }
+
+                    if (parameters.ForceHighPerformanceGpu)
+                    {
+                        settings.CefCommandLineArgs["force_high_performance_gpu"] = "1";
+                    }
+
+                    if (parameters.DisableNewContentRenderingDelay)
+                    {
+                        settings.CefCommandLineArgs["disable-new-content-rendering-delay"] = "1";
+                    }
+
                     settings.CefCommandLineArgs["enable-webgl"] = "1";
                     settings.CefCommandLineArgs["use-angle"] = "";
                     settings.CefCommandLineArgs["enable-accelerated-2d-canvas"] = "1";
@@ -447,8 +470,15 @@ public class Program
                     settings.CefCommandLineArgs["remote-allow-origins"] = "*";
                     settings.CefCommandLineArgs["no-sandbox"] = "1";
 
-                    // Deterministic frame pacing for broadcast pipelines
-                    settings.CefCommandLineArgs["enable-begin-frame-scheduling"] = "0";
+                    // Frame scheduling
+                    if (parameters.EnableBeginFrameScheduling)
+                    {
+                        settings.CefCommandLineArgs["enable-begin-frame-scheduling"] = "1";
+                    }
+                    else
+                    {
+                        settings.CefCommandLineArgs["enable-begin-frame-scheduling"] = "0";
+                    }
 
                     if (!parameters.DisableAudio)
                     {
@@ -458,9 +488,8 @@ public class Program
                     if (!string.IsNullOrWhiteSpace(parameters.CefExtraArgs))
                     {
                         // Use indexer assignment instead of Add() so user-supplied flags can
-                        // override anything we set above (e.g. passing
-                        // --cef-extra-args="disable-gpu-vsync=0" to undo the preset). Add()
-                        // throws ArgumentException on duplicate keys and would crash CEF init.
+                        // override anything we set above. If a boolean flag is set to "0" or "false",
+                        // remove it from CefCommandLineArgs so Chromium doesn't treat the switch as active.
                         foreach (var entry in parameters.CefExtraArgs.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                         {
                             var eq = entry.IndexOf('=');
@@ -475,8 +504,25 @@ public class Program
                                 var value = entry[(eq + 1)..].Trim();
                                 if (!string.IsNullOrEmpty(key))
                                 {
-                                    settings.CefCommandLineArgs[key] = value;
-                                    Log.Information("Cef extra arg: --{Flag}={Value}", key, value);
+                                    if (value == "0" || string.Equals(value, "false", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        if (settings.CefCommandLineArgs.ContainsKey(key))
+                                        {
+                                            settings.CefCommandLineArgs.Remove(key);
+                                            Log.Information("Cef extra arg removed: --{Flag}", key);
+                                        }
+                                        else
+                                        {
+                                            // Explicitly assign "0" if not present, in case sub-process accepts value=0
+                                            settings.CefCommandLineArgs[key] = value;
+                                            Log.Information("Cef extra arg: --{Flag}={Value}", key, value);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        settings.CefCommandLineArgs[key] = value;
+                                        Log.Information("Cef extra arg: --{Flag}={Value}", key, value);
+                                    }
                                 }
                             }
                         }
@@ -1322,8 +1368,12 @@ public class Program
         "--disable-gpu-vsync",
         "--disable-frame-rate-limit",
         "--preset-high-performance",
+        "--force-high-performance-gpu",
+        "--enable-begin-frame-scheduling",
+        "--disable-new-content-rendering-delay",
         "--pacing-mode",
         "--ndi-send-async",
+        "--cef-extra-args",
     };
 }
 

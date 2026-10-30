@@ -78,16 +78,20 @@ user types a non-empty name. Initial default is "HTML5" before prompting. |
 | `--smoothness-pump-windowless-rate` / `--smoothness-pump-output-rate` | `--smoothness-pump-windowless-rate` | Chooses whether Smoothness mode drives the frame pump from the ~240 fps windowless render cadence (default) or the NDI output cadence. |
 | `--telemetry-interval=<seconds>` | `--telemetry-interval=10` | Seconds between video pipeline telemetry log entries. Defaults to 10. |
 | `--windowless-frame-rate=<double>` | `--windowless-frame-rate=60` | Overrides Chromium's internal repaint cadence. Defaults to the rounded value of `--fps`. |
-| `--disable-gpu-vsync` | `--disable-gpu-vsync` | Passes `--disable-gpu-vsync` to Chromium to remove GPU vsync throttling. |
-| `--disable-frame-rate-limit` | `--disable-frame-rate-limit` | Passes `--disable-frame-rate-limit` to Chromium for maximum redraw throughput. |
+| `--disable-gpu-vsync` | `--disable-gpu-vsync` | Passes `--disable-gpu-vsync` to Chromium to remove GPU vsync throttling (default: off). |
+| `--disable-frame-rate-limit` | `--disable-frame-rate-limit` | Passes `--disable-frame-rate-limit` to Chromium for maximum redraw throughput (default: off). |
 | `--enable-gpu-rasterization` | `--enable-gpu-rasterization` | Forces Chromium to rasterize content on the GPU for off-screen rendering scenarios. |
 | `--enable-zero-copy` | `--enable-zero-copy` | Enables Chromium's zero-copy raster uploads so textures can be shared without an extra copy. |
 | `--enable-oop-rasterization` | `--enable-oop-rasterization` | Moves raster work to the out-of-process raster thread. Alias: `--enable-out-of-process-rasterization`. |
 | `--disable-background-throttling` | `--disable-background-throttling` | Prevents Chromium from throttling timers or hidden renderers. Also sets `--disable-renderer-backgrounding`. |
+| `--force-high-performance-gpu` | `--force-high-performance-gpu` | Passes `force_high_performance_gpu=1` to Chromium to prefer discrete GPU. |
+| `--enable-begin-frame-scheduling` | `--enable-begin-frame-scheduling` | Passes `enable-begin-frame-scheduling=1` to Chromium for deterministic frame scheduling. |
+| `--disable-new-content-rendering-delay` | `--disable-new-content-rendering-delay` | Passes `disable-new-content-rendering-delay=1` to Chromium. |
 | `--preset-high-performance` | `--preset-high-performance` | Enables a preset of Chromium flags for maximum rendering throughput. This is equivalent to enabling `--enable-gpu-rasterization`, `--enable-zero-copy`, `--enable-oop-rasterization`, `--disable-gpu-vsync`, `--disable-frame-rate-limit`, and `--disable-background-throttling`. |
 | `--preview` / `--enable-preview` / `--disable-preview` | `--preview` | Controls whether the interactive desktop preview window is displayed. When enabled, renders live OSR frames and translates/forwards mouse and keyboard input directly into Chromium while keeping NDI active. Enabled by default in the launcher. |
 | `--pacing-mode=<Latency|Smoothness>` | `--pacing-mode=Smoothness` | Selects the paced sender strategy. The default `Latency` mode keeps the shallow paced buffer contract, while `Smoothness` tries to prioritise continuous motion with a deep buffer and high windowless render rate; when Smoothness is chosen without an explicit depth it now forces paced buffering with a 300-frame capacity even if buffering was already enabled via flag, and the launcher preserves previously saved Smoothness buffer depths when reopening settings (only reapplying the 300-frame default after the user reselects Smoothness). |
 | `--enable-compositor-capture` / `--disable-compositor-capture` | `--enable-compositor-capture` | Opts into the compositor capture experiment guarded by `CompositorCaptureBridge`. When the helper DLL is missing or the toggle is off the app reverts to the legacy paint path. |
+| `--cef-extra-args="<flags>"` | `--cef-extra-args="flag1=val1;flag2=val2"` | Passes extra arguments directly to CEF. Arguments with `=0` or `=false` are removed from `CefCommandLineArgs`. |
 | `-debug` | `-debug` | Raises Serilog minimum level to `Debug`. |
 | `-quiet` | `-quiet` | Disables console logging (file logging remains). |
 

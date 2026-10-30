@@ -57,12 +57,17 @@ Parameter|Description
 `--enable-compositor-capture` / `--disable-compositor-capture`|Bypass the legacy invalidation loop and stream frames directly from Chromium's compositor via the native capture helper. Defaults to disabled.
 `--telemetry-interval=10`|Seconds between video pipeline telemetry log entries. Defaults to 10 seconds.
 `--windowless-frame-rate=60`|Overrides CEF's internal repaint cadence. Defaults to the nearest integer of `--fps`.
-`--disable-gpu-vsync`|Disables Chromium's GPU vsync throttling. Enabled by default.
-`--disable-frame-rate-limit`|Disables Chromium's frame rate limiter. Enabled by default.
+`--disable-gpu-vsync`|Disables Chromium's GPU vsync throttling. Defaults to off (VSync enabled).
+`--disable-frame-rate-limit`|Disables Chromium's frame rate limiter. Defaults to off (Rate limit enabled).
 `--enable-gpu-rasterization`|Forces Chromium to rasterize content on the GPU even for off-screen contexts. Enabled by default.
 `--enable-zero-copy`|Enables zero-copy raster uploads from GPU memory to reduce texture copies. Enabled by default.
 `--enable-oop-rasterization`|Moves rasterization work to the out-of-process raster thread for smoother rendering. Enabled by default.
 `--disable-background-throttling`|Prevents Chromium from throttling timers or renderers when the view is hidden/off-screen. Enabled by default.
+`--force-high-performance-gpu`|Forces Chromium to select the discrete high-performance GPU adapter.
+`--enable-begin-frame-scheduling`|Enables Chromium's begin-frame scheduling for strict frame cadence control.
+`--disable-new-content-rendering-delay`|Instructs Chromium to remove the rendering delay for newly added content.
+`--preset-high-performance`|Preset combining GPU rasterization, zero-copy, OOP rasterization, disabled GPU vsync/frame rate limit, and disabled background throttling.
+`--cef-extra-args="k1=v1;k2=v2"`|Passes semicolon-separated switches directly to CEF/Chromium. Setting a switch to `=0` removes it from active arguments.
 `--preview` / `--enable-preview`|Displays an interactive desktop preview window that renders the live OSR stream and translates/forwards mouse and keyboard input directly into Chromium while streaming to NDI. Enabled by default in the launcher.
 `--disable-preview`|Suppresses the interactive preview window when launching via CLI.
 `--launcher`|Forces the launcher window to appear even when other parameters are supplied.
