@@ -40,6 +40,9 @@ public sealed class LaunchParameters
         bool enableOutOfProcessRasterization,
         bool disableBackgroundThrottling,
         bool presetHighPerformance,
+        bool forceHighPerformanceGpu,
+        bool enableBeginFrameScheduling,
+        bool disableNewContentRenderingDelay,
         PacingMode pacingMode,
         bool ndiSendAsync,
         bool disableAudio,
@@ -81,6 +84,9 @@ public sealed class LaunchParameters
         EnableOutOfProcessRasterization = enableOutOfProcessRasterization;
         DisableBackgroundThrottling = disableBackgroundThrottling;
         PresetHighPerformance = presetHighPerformance;
+        ForceHighPerformanceGpu = forceHighPerformanceGpu;
+        EnableBeginFrameScheduling = enableBeginFrameScheduling;
+        DisableNewContentRenderingDelay = disableNewContentRenderingDelay;
         PacingMode = pacingMode;
         NdiSendAsync = ndiSendAsync;
         DisableAudio = disableAudio;
@@ -231,6 +237,21 @@ public sealed class LaunchParameters
     /// Gets a value indicating whether the high-performance preset should be enabled.
     /// </summary>
     public bool PresetHighPerformance { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether Chromium should force high-performance GPU selection.
+    /// </summary>
+    public bool ForceHighPerformanceGpu { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether Chromium's begin-frame scheduling should be enabled.
+    /// </summary>
+    public bool EnableBeginFrameScheduling { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether Chromium's new content rendering delay should be disabled.
+    /// </summary>
+    public bool DisableNewContentRenderingDelay { get; }
 
     /// <summary>
     /// Gets the pacing mode for the video pipeline.
@@ -480,6 +501,9 @@ public sealed class LaunchParameters
         var enableOutOfProcessRasterization = HasFlag("--enable-oop-rasterization") || HasFlag("--enable-out-of-process-rasterization");
         var disableBackgroundThrottling = HasFlag("--disable-background-throttling") || HasFlag("--disable-renderer-backgrounding");
         var presetHighPerformance = HasFlag("--preset-high-performance");
+        var forceHighPerformanceGpu = HasFlag("--force-high-performance-gpu");
+        var enableBeginFrameScheduling = HasFlag("--enable-begin-frame-scheduling");
+        var disableNewContentRenderingDelay = HasFlag("--disable-new-content-rendering-delay");
         var ndiSendAsync = HasFlag("--ndi-send-async");
         var disableAudio = HasFlag("--disable-audio");
         var enablePreview = HasFlag("--preview") || ResolveToggle("--enable-preview", "--disable-preview", false);
@@ -612,6 +636,9 @@ public sealed class LaunchParameters
             enableOutOfProcessRasterization,
             disableBackgroundThrottling,
             presetHighPerformance,
+            forceHighPerformanceGpu,
+            enableBeginFrameScheduling,
+            disableNewContentRenderingDelay,
             pacingMode,
             ndiSendAsync,
             disableAudio,
@@ -724,10 +751,13 @@ public sealed class LaunchParameters
             settings.EnableOutOfProcessRasterization,
             settings.DisableBackgroundThrottling,
             settings.PresetHighPerformance,
+            settings.ForceHighPerformanceGpu,
+            settings.EnableBeginFrameScheduling,
+            settings.DisableNewContentRenderingDelay,
             settings.PacingMode,
             settings.NdiSendAsync,
             disableAudio: false,
-            cefExtraArgs: null,
+            cefExtraArgs: settings.CefExtraArgs,
             mmTimerResolutionMs: null,
             processPriority: null,
             cpuAffinityMask: null,

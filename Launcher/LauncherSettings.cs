@@ -61,13 +61,13 @@ public class LauncherSettings
     /// Gets or sets a value indicating whether to disable Chromium's GPU vsync throttling.
     /// </summary>
     public bool DisableGpuVsync { get; set; }
-        = true;
+        = false;
 
     /// <summary>
     /// Gets or sets a value indicating whether to disable Chromium's frame rate limiter.
     /// </summary>
     public bool DisableFrameRateLimit { get; set; }
-        = true;
+        = false;
 
     /// <summary>
     /// Gets or sets a value indicating whether the paced buffer should keep playing any queued frames during recovery.
@@ -148,7 +148,30 @@ public class LauncherSettings
     /// Gets or sets a value indicating whether the high-performance preset should be enabled.
     /// </summary>
     public bool PresetHighPerformance { get; set; }
-        = true;
+        = false;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether Chromium should force high-performance GPU selection.
+    /// </summary>
+    public bool ForceHighPerformanceGpu { get; set; }
+        = false;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether Chromium's begin-frame scheduling should be enabled.
+    /// </summary>
+    public bool EnableBeginFrameScheduling { get; set; }
+        = false;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether Chromium's new content rendering delay should be disabled.
+    /// </summary>
+    public bool DisableNewContentRenderingDelay { get; set; }
+        = false;
+
+    /// <summary>
+    /// Gets or sets extra Chromium command-line switches (e.g. "flag1=val1;flag2=val2").
+    /// </summary>
+    public string? CefExtraArgs { get; set; }
 
     /// <summary>
     /// Gets or sets the pacing mode for the video pipeline.
