@@ -25,7 +25,7 @@ desktop" workload before compiling.
 
 ### Build command:
 
-`dotnet publish Tractus.HtmlToNdi.csproj -c Release -r win-x64 --self-contained false -o C:\VJ\NDI-Browser`
+`dotnet publish Tractus.HtmlToNdi.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:AssemblyName=NDI-Browser -o C:\VJ\NDI-Browser`
 
 ## Usage
 
