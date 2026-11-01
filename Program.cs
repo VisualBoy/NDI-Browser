@@ -586,11 +586,14 @@ public class Program
 
             metadataCancellation = new CancellationTokenSource();
             var metadataToken = metadataCancellation.Token;
+            var kvmHandler = new NdiKvmHandler(
+                () => browserWrapper,
+                () => width,
+                () => height,
+                Log.Logger);
             metadataThread = new Thread(() =>
             {
                 var metadata = new NDIlib.metadata_frame_t();
-                var x = 0.0f;
-                var y = 0.0f;
                 Log.Information("NDI metadata capture thread started");
                 try
                 {
@@ -622,38 +625,13 @@ public class Program
                         {
                             var metadataConverted = UTF.Utf8ToString(metadata.p_data);
 
-                            if (metadataConverted.StartsWith("<ndi_kvm u=\"", StringComparison.Ordinal))
+                            try
                             {
-                                metadataConverted = metadataConverted.Replace("<ndi_kvm u=\"", string.Empty, StringComparison.Ordinal);
-                                metadataConverted = metadataConverted.Replace("\"/>", string.Empty, StringComparison.Ordinal);
-
-                                try
-                                {
-                                    var binary = Convert.FromBase64String(metadataConverted);
-
-                                    var opcode = binary[0];
-
-                                    if (opcode == 0x03)
-                                    {
-                                        x = BitConverter.ToSingle(binary, 1);
-                                        y = BitConverter.ToSingle(binary, 5);
-                                    }
-                                    else if (opcode == 0x04)
-                                    {
-                                        // Mouse Left Down
-                                        var screenX = (int)(x * width);
-                                        var screenY = (int)(y * height);
-
-                                        browserWrapper?.Click(screenX, screenY);
-                                    }
-                                    else if (opcode == 0x07)
-                                    {
-                                        // Mouse Left Up
-                                    }
-                                }
-                                catch
-                                {
-                                }
+                                kvmHandler.ProcessMetadata(metadataConverted);
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.Logger.Warning(ex, "Error processing KVM metadata frame");
                             }
 
                             Log.Logger.Warning("Got metadata: " + metadataConverted);

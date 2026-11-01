@@ -45,8 +45,10 @@ For a concrete 30p stability recipe (CLI switches plus launcher checkboxes), see
 * **Control plane:** ASP.NET Core minimal APIs listen on HTTP (no TLS, no auth). Swagger UI is always on. Endpoints dispatch
   directly into the singleton `Program.browserWrapper`.
 * **KVM metadata:** The app advertises `<ndi_capabilities ntk_kvm="true" />`, then polls `NDIlib.send_capture` every second.
-  `0x03` updates normalized mouse coordinates; `0x04` triggers a left-click via `CefWrapper.Click` (mouse down/up with a 100 ms
-  pause). Other opcodes are ignored on purpose.
+  `NdiKvmHandler` processes both uncompressed (`<ndi_kvm u="...">`) and zlib-compressed (`<ndi_kvm d="...">`) payloads.
+  `0x03` updates normalized coordinates and forwards mouse moves (`SendMouseMove`), `0x04`/`0x07` handle left mouse down/up,
+  `0x05`/`0x08` handle middle/wheel mouse down/up, `0x06`/`0x09` handle right mouse down/up, and `0x0A` handles mouse wheel
+  scrolling. Holding down a mouse button while moving enables click-and-drag across all three buttons.
 * **Shutdown:** After `app.Run()` completes the metadata thread is cancelled (with a hard join fallback), `CefWrapper.Dispose`
   tears down compositor/paint handlers, `Cef.Shutdown()` runs when it was initialized, the paced pipeline is disposed, and the
   temporary cache directory is deleted. The code now destroys the unmanaged sender (`NDIlib.send_destroy`), calls
@@ -246,8 +248,8 @@ When adding routes, update **both** this table and `Tractus.HtmlToNdi.http` samp
   `NDIlib.send_destroy`, `NDIlib.destroy()`, and frees the native library handle while tolerating runtimes that omit those exports.
 * Metadata loop logs every metadata frame at `Warning` level (`Log.Logger.Warning("Got metadata: ...")`), which can flood logs if
   receivers send frequent updates.
-* Only opcodes `0x03` (mouse move) and `0x04` (left click) are handled; `0x07` (mouse up) is acknowledged but intentionally ignored.
-  There is no translation for scroll, keyboard, or multi-button events.
+* `NdiKvmHandler` translates opcodes `0x03` (mouse move), `0x04`/`0x07` (left down/up), `0x05`/`0x08` (middle down/up),
+  `0x06`/`0x09` (right down/up), and `0x0A` (vertical scroll wheel). Both uncompressed and zlib-compressed payloads are supported.
 
 ### Frame buffering and pacing (`Video/NdiVideoPipeline.cs`)
 * `FrameRingBuffer<T>` drops the oldest frame when capacity is exceeded and surfaces it via the `out` parameter. That action
@@ -285,8 +287,8 @@ When adding routes, update **both** this table and `Tractus.HtmlToNdi.http` samp
 1. **Single-instance design:** Global static `browserWrapper`/`NdiSenderPtr` make multiple concurrent browsers impossible without
    a refactor.
 2. **Authentication void:** HTTP API is wide open. Use reverse proxies or add middleware before shipping to production.
-3. **Input fidelity gaps:** No key-up events, modifiers, IME, or right/middle mouse buttons. `/scroll` ignores pointer position.
-   Drag-and-drop is unsupported.
+3. **Input fidelity gaps:** No key-up events, modifiers, or IME for the HTTP `/keystroke` endpoint. `/scroll` ignores pointer position.
+   KVM metadata supports left, middle, right click-and-drag and scroll wheel.
 4. **Codec constraints:** Standard Chromium build without proprietary codecs—DRM/H.264/YouTube may fail.
 5. **Audio layout:** Output buffer is not truly interleaved despite metadata suggesting so, which may confuse strict NDI consumers.
 6. **Compositor capture packaging:** The experimental path requires `CompositorCapture.dll` alongside the executable and currently

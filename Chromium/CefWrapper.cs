@@ -10,7 +10,7 @@ namespace Tractus.HtmlToNdi.Chromium;
 /// <summary>
 /// Manages the lifecycle and interaction with a CefSharp off-screen browser instance.
 /// </summary>
-internal class CefWrapper : IDisposable
+internal class CefWrapper : IDisposable, IBrowserInputDispatcher
 {
     private bool disposedValue;
     private ChromiumWebBrowser? browser;
